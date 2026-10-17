@@ -1,6 +1,6 @@
 # ARCHITECTURE.md — Konkan Coastal Foods HRMS
 
-Checkpoint 2. **Status: DRAFT for review — not yet signed off.** Draft date 2026-10-17. No application code exists or may be written until sign-off is recorded in §12.
+Checkpoint 2. **Status: owner sign-off recorded 2026-10-17 (§12); faculty sign-off PENDING.** Revision 2 (2026-10-17) incorporates the owner's resolutions of all open questions and the senior-architect review (§13). No application code may be written until the faculty sign-off is also recorded in §12.
 
 Business rules referenced as `DV-*`, `AR-*`, `LR-*` live in `RESEARCH.md` §10. Rows below follow the decision table on brief p.16.
 
@@ -16,8 +16,11 @@ Business rules referenced as `DV-*`, `AR-*`, `LR-*` live in `RESEARCH.md` §10. 
 | 8 | Dates and time zone |
 | 9 | Folder structure |
 | 10 | Risks and test plan |
-| 11 | Open questions for sign-off |
-| 12 | Decision log |
+| 11 | Open questions — resolved |
+| 12 | Decision log (incl. sign-off) |
+| 13 | Senior-architect review |
+
+Screens, flows and the design system are in `DESIGN.md`; every UI element there maps to a table/column/RPC defined here.
 
 ---
 
@@ -77,6 +80,8 @@ Key properties:
 - **Two independent gates after authentication:** the Next.js server (②③) *and* Postgres (⑥). Bypassing the UI, or a bug in a server action, still hits RLS/RPC checks.
 - The app uses a **user-scoped Supabase client** (the user's Clerk token), never the service-role key, for every user-initiated request including every agent tool call. The **service-role key exists in exactly three places** (server-only module `lib/supabase/admin.ts`): the seed script, first-login Clerk↔employee linking, and the email-outbox sender. It is forbidden in agent/tool code (lint rule + import test).
 - The LLM receives only: system prompt, the user's messages, tool schemas and **allow-listed tool outputs**.
+- **The browser never talks to Supabase.** No `NEXT_PUBLIC_SUPABASE_*` variables; the Supabase URL and keys exist only on the server. Every DB call goes through a server action/route handler (②③), then RLS (⑥). This removes the "anyone can call PostgREST with the public key" attack surface entirely; RLS remains as the second gate.
+- **No RPC accepts an `actor_id`.** The acting employee is always derived from the JWT inside the function (`current_employee_id()`).
 
 ---
 
@@ -113,13 +118,21 @@ erDiagram
   employees ||--o{ agent_drafts : "owner"
   employees ||--o{ email_outbox : "recipient"
   policy_documents }o--|| leave_types : "optional link"
+  locations ||--|{ location_weekly_offs : "weekly offs, effective-dated"
+  employees ||--|{ employee_location_history : "location over time"
+  locations ||--o{ employee_location_history : ""
+  leave_types ||--|{ leave_type_rules : "rules, versioned by year"
+  employees ||--o{ wfh_requests : requests
+  employees ||--o{ optional_holiday_requests : requests
+  holidays ||--o{ optional_holiday_requests : "optional day chosen"
+  employees ||--o{ month_exports : "exported_by"
 ```
 
 ### 3.2 Tables, keys and constraints
 
 PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK = check.
 
-**`locations`** — PK `id`. UQ `name`. Fields: `city`, `state_code` FK `indian_states`, `weekly_off_days smallint[]` (CK: non-empty, each in 1..7, no duplicates), `is_active`. Seed: *Panaji Head Office* `{6,7}`; *Verna Plant* `{7}` (AR-3).
+**`locations`** — PK `id`. UQ `name`. Fields: `city`, `state_code` FK `indian_states`, `is_active`. Seed: *Panaji Head Office* (5-day week), *Verna Plant* (6-day week). Weekly offs live in `location_weekly_offs` (below) so history is never rewritten.
 
 **`departments`** — PK `id`. UQ `name`, `is_active`.
 
@@ -129,7 +142,7 @@ PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK =
 - `clerk_user_id text` UQ, nullable until first login link.
 - `employee_code text` UQ NOT NULL; CK `^KCF[0-9]{4,}$`; default from sequence `employee_code_seq`; **trigger forbids update** (DV-10).
 - `full_name`, `email citext` UQ NOT NULL (the login e-mail), `dob date`, `gender` enum(female, male, other), `date_of_joining date`, `last_working_day date` NULL, `designation`, `salary_grade`.
-- `location_id` FK, `department_id` FK, `reporting_manager_id` FK → `employees.id` (NULL only for the top of the hierarchy).
+- `location_id` FK (= the **current** location; changed only by the `transfer_employee()` RPC, which also appends to `employee_location_history`; a pgTAP invariant keeps them equal), `department_id` FK, `reporting_manager_id` FK → `employees.id` (NULL only for the top of the hierarchy).
 - `is_hr_admin boolean` NOT NULL default false. `status` enum(active, inactive).
 - CK `reporting_manager_id <> id` (DV-9). CK `dob + 18 years ≤ date_of_joining` (DV-7). CK `last_working_day IS NULL OR last_working_day ≥ date_of_joining`. CK `status='inactive' ⇒ last_working_day IS NOT NULL` (DV-11).
 - Triggers: no reporting cycles (walk the ancestor chain; reject if the new manager is the employee or any descendant — DV-9); manager must be active at assignment; cannot deactivate a person with active reports; cannot remove the last active HR admin; job-field changes write to `audit_log`.
@@ -137,19 +150,21 @@ PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK =
 
 **`employee_contact`** — PK/FK `employee_id`. `mobile` CK `^[6-9][0-9]{9}$` (DV-5), `address_line1/2`, `city`, `state_code` FK, `pin_code` CK `^[0-9]{6}$`, emergency contact `ec_name`, `ec_relationship`, `ec_mobile` (same CK). **Self-editable** (RLS), unlike `employees`. This split is what lets RLS express E5 ("employee edits own contact, job fields read-only") without column-level tricks.
 
-**`employee_statutory`** — PK/FK `employee_id`. `pan` CK `^[A-Z]{5}[0-9]{4}[A-Z]$` (DV-1); `uan` CK `^[0-9]{12}$` NULL (DV-3); Aadhaar stored as `aadhaar_ciphertext bytea` (**application-layer AES-GCM, key in server env, write-only**) + `aadhaar_last4 char(4)` CK digits (DV-2). Nobody — including HR — can ever read the full number back (it is never displayed), so no code path decrypts it; the ciphertext exists only to satisfy "store it" with minimal exposure. *Decision pending OQ-1.*
+**`employee_statutory`** — PK/FK `employee_id`. `pan` CK `^[A-Z]{5}[0-9]{4}[A-Z]$` (DV-1); `uan` CK `^[0-9]{12}$` NULL (DV-3); Aadhaar stored as `aadhaar_ciphertext bytea` (**application-layer AES-GCM, key in server env, write-only**) + `aadhaar_last4 char(4)` CK digits (DV-2). Nobody — including HR — can ever read the full number back (it is never displayed), so no code path decrypts it; the ciphertext exists only to satisfy "store it" with minimal exposure. **Resolved (OQ-1/OQ-11): Aadhaar has no unmask option anywhere; UI shows `XXXX XXXX 1234` only.** PAN and bank account number *can* be revealed by an HR Admin, each click audit-logged (§5.3). UAN is not on the brief's masking list and is shown in full to the employee and HR.
 
 **`employee_bank`** — PK/FK `employee_id`. `account_number` CK `^[0-9]{9,18}$` (DV-8), `ifsc` CK `^[A-Z]{4}0[A-Z0-9]{6}$` (DV-4), `bank_name`.
 
-**`holidays`** — PK `id`. FK `location_id`. `holiday_date date`, `name`, `type` enum(national, state, optional). **UQ `(location_id, holiday_date)`**. A national holiday is entered for each location ("apply to all locations" helper inserts one row per location).
+**`holidays`** — PK `id`. FK `location_id`. `holiday_date date`, `name`, `type` enum(national, state, optional). **UQ `(location_id, holiday_date)`**. A national holiday is entered for each location ("apply to all locations" helper inserts one row per location). `type='optional'` days are only *offered*: an optional day is a paid holiday for an employee **only** through an approved `optional_holiday_requests` row (LR-20).
 
-**`attendance`** — PK `id`. FK `employee_id`. `work_date date` — **set by trigger** from `check_in AT TIME ZONE 'Asia/Kolkata'`, never client-supplied. `check_in timestamptz`, `check_out timestamptz` NULL, `is_wfh boolean`, `source` enum(self, regularised, hr_correction). Derived by trigger: `worked_minutes int`, `punch_status` enum(present, half_day, absent), `is_late boolean`.
-- **UQ `(employee_id, work_date)`** (AR-2). CK `check_out > check_in`. CK `is_wfh OR check_in IS NOT NULL`. CK `work_date` is not after today(IST) (enforced in the RPC; CK can't call `now()` safely).
-- Final *day* status (leave, holiday, weekly off, not-employed) is **not stored** — see view `v_day_status` (§6).
+**`attendance`** — PK `id`. FK `employee_id`. `work_date date` — **set by trigger** from `check_in AT TIME ZONE 'Asia/Kolkata'`, never client-supplied. `check_in timestamptz` NOT NULL, `check_out timestamptz` NULL, `source` enum(self, regularised, hr_correction). **Facts only — nothing derived is stored** (no worked minutes, no Late flag, no status): thresholds could change and stored derivations would go stale.
+- **UQ `(employee_id, work_date)`** (AR-2). CK `check_out > check_in`. CK `work_date` is not after today(IST) (enforced in the RPC; CK can't call `now()` safely).
+- Worked minutes, Late, punch status and the final *day* status (leave, holiday, weekly off, WFH, not-employed) are all computed in view `v_day_status` (§6). Approved WFH comes from `wfh_requests`, not from a flag on this table.
 
 **`regularisation_requests`** — PK `id`. FK `employee_id`; `work_date date`; `attendance_id` FK NULL (a fully missed day has no row yet); `requested_in`, `requested_out timestamptz`; `reason text NOT NULL` (CK length ≥ 5); `status` enum(pending, approved, rejected, cancelled); `decided_by` FK employees, `decided_at`, `decided_comment`. CK `requested_out > requested_in`. **Partial UQ `(employee_id, work_date) WHERE status='pending'`**. Decision requires `decided_by ≠ employee_id`.
 
-**`leave_types`** — PK `id`; UQ `code` (CL, SL, EL, ML, PL, LOP). `name`, `annual_quota numeric(4,1)` NULL, `accrual_method` enum(upfront_prorated, monthly, on_request, none), `accrual_per_month numeric(3,2)` NULL (EL 1.25), `carry_forward_max numeric(4,1)` NULL (CL/SL 0, EL 30, others NULL), `half_day_allowed bool`, `counts_calendar_days bool` (maternity), `is_paid bool` (LOP false), `applicable_gender` enum(any, female, male), `doc_required_over_days int` NULL (SL 2), `max_days_per_request numeric` NULL (ML 182, PL 5), `is_active`. CK combinations (e.g. `monthly ⇒ accrual_per_month NOT NULL`).
+**`leave_types`** — identity only. PK `id`; UQ `code` (CL, SL, EL, ML, PL, LOP). `name`, `is_paid bool` (LOP false), `counts_calendar_days bool` (ML true), `applicable_gender` enum(any, female, male), `is_event_based bool` (ML, PL: not part of the annual balance), `is_active`.
+
+**`leave_type_rules`** — the configurable policy, **versioned by year** so editing a rule never rewrites past balances. PK `(leave_type_id, effective_from_year)`. Rule for year *Y* = the row with the greatest `effective_from_year ≤ Y`. Fields: `annual_quota numeric(4,1)` NULL, `accrual_method` enum(upfront_prorated, monthly, on_request, none), `accrual_per_month numeric(3,2)` NULL (EL 1.25), `carry_forward_max numeric(4,1)` NULL (CL/SL 0, EL 30), `half_day_allowed bool`, `doc_required_over_days int` NULL (SL 2; ML 0 = always), `max_days_per_request numeric(5,1)` NULL (ML 182 calendar days, PL 5 working days), `must_be_continuous bool` (ML, PL), `min_service_days int` NULL (ML 80). CK combinations (e.g. `monthly ⇒ accrual_per_month NOT NULL`). HR's "edit leave type" screen inserts a new rule row for the chosen year (current or future only; past years are read-only).
 
 **`leave_opening_balances`** — only for go-live data import (and seed): PK `(employee_id, leave_type_id, year)`, `days numeric(5,1)`. Not used for steady state.
 
@@ -171,6 +186,16 @@ PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK =
 
 **`agent_log`** — PK `id`. `employee_id`, `conversation_id uuid`, `tool text`, `inputs jsonb`, `result jsonb` (post-allow-list, i.e. exactly what the model saw), `outcome` enum(ok, denied, error, limit_exceeded), `latency_ms`, `created_at`. Insert-only for the user; HR can read all, others read their own.
 
+**`location_weekly_offs`** — PK `(location_id, effective_from date)`. `weekly_off_days smallint[]` (CK: non-empty, each 1..7, no duplicates; ISO 1 = Mon). Weekly offs for a date = the row with the greatest `effective_from ≤ date`. Seed: Panaji `{6,7}` and Verna `{7}`, both effective `2000-01-01`. The RPC refuses an `effective_from` inside a month already in `month_exports`.
+
+**`employee_location_history`** — PK `(employee_id, effective_from date)`. FK `location_id`. `location_on(employee, date)` resolves which site's weekly offs and holidays applied on any past date. Without it, transferring someone from Panaji to Verna would silently turn their past Saturdays from Weekly Off into Absent.
+
+**`wfh_requests`** — PK `id`. FK `employee_id`; `work_date date`; `reason text NOT NULL`; `status` enum(pending, approved, rejected, cancelled); `decided_by` FK, `decided_at`, `decided_comment`. **Partial UQ `(employee_id, work_date) WHERE status IN ('pending','approved')`**. Only approved requests make a day WFH (AR-7). `work_date` must be today(IST) or later (a missed WFH goes through regularisation); not on a weekly off, holiday or active leave day (RPC); `decided_by ≠ employee_id`.
+
+**`optional_holiday_requests`** — PK `id`. FK `employee_id`, FK `holiday_id` (must be `type='optional'` and at the employee's location on `holiday_date`); `status` enum(pending, approved, rejected, cancelled); `decided_by`, `decided_at`, `decided_comment`. **Partial UQ `(employee_id, holiday_id) WHERE status IN ('pending','approved')`**. The **cap of 2 per calendar year** (`policy_settings.optional_holidays_per_year`) counts pending + approved requests, keyed on the holiday's year, and is enforced inside `request_optional_holiday()` under the employee row lock (LR-20).
+
+**`month_exports`** — PK `id`. `month date` (first of month), `scope` (`all` / `team` / location or department filter as text), `exported_by` FK, `exported_at`, `row_count`, `content_hash text`. One row per CSV download. Lets Reports warn "exported on …; figures changed since" by re-hashing, and blocks weekly-off changes inside exported months.
+
 ### 3.3 Changes from the brief's suggested model, with reasons
 
 | Change | Reason |
@@ -178,7 +203,7 @@ PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK =
 | `employee_contact` split out of `employees` | RLS: self may edit contact but not job fields (E5) without trigger gymnastics |
 | `employee_statutory` / `employee_bank` kept separate | Stricter RLS + no direct SELECT; masked views only (E7) |
 | `indian_states` table | Dropdown source; FK integrity instead of a free-text state |
-| `attendance.status` replaced by derived `punch_status` + view `v_day_status` | Day status depends on leave, holidays, weekly offs and employment dates; storing it would go stale whenever any of those change |
+| `attendance.status` removed; day status and punch result computed in view `v_day_status` | Day status depends on leave, holidays, weekly offs and employment dates; storing it would go stale whenever any of those change |
 | `regularisation_requests.work_date` added; `attendance_id` made nullable | A fully missed day has no attendance row to point at |
 | **`leave_balances` removed**; replaced by view `v_leave_balance` + `leave_opening_balances` + `leave_adjustments` | See §4 — balances are calculated, never stored |
 | `leave_request_days` added | Exact per-day truth for balance, calendar, CSV, LOP split, overlaps, holiday release |
@@ -186,6 +211,13 @@ PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK =
 | `leave_types` gained `counts_calendar_days`, `max_days_per_request`, `applicable_gender`, `doc_required_over_days`, `is_paid` | Maternity/paternity/SL-certificate/LOP rules are data, not code |
 | `audit_log` gained `action`, `reason`; masks sensitive values | Covers reveal/correction events without leaking values |
 | Added `policy_documents`, `policy_settings`, `email_outbox`, `agent_drafts`, `agent_log` | Agent policy source; configurable constants; reliable email; draft→confirm; required `agent_log` |
+| `locations.weekly_off_days` → `location_weekly_offs` (effective-dated) | Changing weekly offs must not rewrite past attendance or exported months (review finding C-2) |
+| Added `employee_location_history` | Transfers must not rewrite past day statuses (review finding C-1) |
+| `leave_types` split into identity + `leave_type_rules` (by year) | Editing a quota/accrual rule must not change past balances/carry-forward (review finding C-3) |
+| `attendance`: removed stored `worked_minutes`, `punch_status`, `is_late`, `is_wfh` | Derive, don't store (review finding C-4); WFH now requires approval |
+| Added `wfh_requests` | Owner decision: WFH counts as Present on **manager approval** (brief A3 said the employee simply marks it) |
+| Added `optional_holiday_requests` | Owner decision: ≤ 2 optional holidays per calendar year, manager-approved, then paid holiday |
+| Added `month_exports` | Detect/guard changes after payroll export (risk R7) |
 
 ---
 
@@ -222,7 +254,10 @@ RLS is **enabled on every table**; `anon` has no access; `authenticated` has onl
 | `employees` | self, HR admin. *Managers/others read people via `v_team_members` / `v_my_manager` (id, code, name, designation, dept, location, status only — no DOB, email)* | HR admin only (RPC); no DELETE for anyone |
 | `employee_contact` | self, HR admin | UPDATE self or HR admin; INSERT HR (RPC) |
 | `employee_statutory`, `employee_bank` | **no direct SELECT grant**; masked view `v_statutory_masked`/`v_bank_masked` returns own row (employee) or any (HR), masked | writes by HR via RPC; employee cannot edit (not in matrix); every change audited masked |
-| `locations`, `departments`, `holidays`, `leave_types`, `indian_states`, `policy_*` | all active employees *(holidays: own location only)* | HR admin only; edits audited |
+| `locations`, `departments`, `location_weekly_offs`, `holidays` (all locations), `leave_types`, `leave_type_rules`, `indian_states`, `policy_*` | all active employees *(non-sensitive reference data; the holiday calendar screen lets anyone view either site, read-only — their own site's rules are what actually apply to them)* | HR admin only; edits audited |
+| `employee_location_history` | self; HR | HR only (`transfer_employee()` RPC) |
+| `wfh_requests`, `optional_holiday_requests` | requester; their manager; HR | INSERT/cancel self via RPC; decision by manager/HR via RPC (`≠ self`) |
+| `month_exports` | HR; manager for own exports | inserted by `log_month_export()` only |
 | `attendance` | self; manager for direct reports; HR all | no direct writes; `check_in()` / `check_out()` / `set_wfh()` RPCs (self) and `apply_regularisation()` / `hr_correct_attendance(reason)` RPCs |
 | `regularisation_requests` | requester; their manager; HR | INSERT self (RPC); decision by manager/HR via RPC (`≠ self`) |
 | `leave_requests`, `leave_request_days` | requester; their manager; HR | no direct writes; `apply_leave()`, `decide_leave()`, `cancel_leave()` RPCs only |
@@ -233,9 +268,11 @@ RLS is **enabled on every table**; `anon` has no access; `authenticated` has onl
 | `agent_drafts` | owner | owner via tool-layer RPC; confirm via action |
 | `agent_log` | own rows; HR all | insert-only for user |
 
+**Execution privileges (a known Supabase pitfall).** Postgres grants `EXECUTE` on new functions to `PUBLIC` by default. Every migration that creates a function or view must `REVOKE ALL … FROM PUBLIC, anon` and `GRANT … TO authenticated` explicitly; RLS helper functions live in a non-exposed `private` schema. A pgTAP test enumerates every function/view in `public` and fails if `anon` or `PUBLIC` can execute/select it. `SECURITY DEFINER` views and functions always filter by `current_employee_id()` / `is_hr_admin()` internally, because they run with owner rights and bypass RLS.
+
 **Object-level checks (the URL-tampering test).** Every route that takes an id (`/employees/[id]`, `/leave/[id]`) loads via the user-scoped client — an id the user may not see returns *zero rows* from RLS, and the page renders `notFound()` (same response as a non-existent id, so existence isn't leaked). The server also asserts `canViewEmployee(ctx, id)` before rendering.
 
-**Statutory/bank reveal.** HR clicks Reveal → server action → `reveal_statutory(employee_id, field, reason)` RPC (HR-only) → returns the one value, writes an `audit_log` row (`action='reveal'`). **Aadhaar has no reveal path (OQ-1).** Revealed values are never put in CSV, logs or the agent's context.
+**Statutory/bank reveal.** HR Admin clicks Reveal → server action → `reveal_statutory(employee_id, field)` RPC (HR-only; `field` ∈ `pan`, `bank_account` — the function has no Aadhaar branch) → returns the one value and writes an `audit_log` row (`action='reveal'`, who, whom, which field, when; reason optional). **Aadhaar has no reveal path anywhere (owner decision).** Revealed values are returned with `Cache-Control: no-store`, never put in a URL, CSV, log or the agent's context, and the UI re-masks after 30 s. Employees and managers never get Reveal, even for their own record.
 
 **Storage.** Medical certificates in a **private** bucket, path `{employee_id}/{request_id}/…`; storage policies: owner and their manager/HR can read; signed URLs with short expiry.
 
@@ -248,9 +285,9 @@ RLS is **enabled on every table**; `anon` has no access; `authenticated` has onl
 | Concern | Where | Notes |
 |---|---|---|
 | Uniqueness, FK, no-cycle, age ≥ 18, formats, immutability | **DB** constraints/triggers | Authority; zod mirrors them only for friendly messages |
-| `count_working_days(location, from, to)` and its per-date breakdown | **DB function** | Skips location weekly offs (from `locations`) and National/State holidays (LR-6); returns the skipped dates and reasons so the UI/agent can explain |
-| Day status (`v_day_status`) | **DB view/function** | Precedence AR-9 over a generated calendar × employee, joining attendance, `leave_request_days`, holidays, weekly offs, employment dates |
-| Late / punch status / worked minutes | **DB trigger** on attendance | Re-fires on regularisation, so rules apply identically |
+| `count_working_days(employee, from, to)` and its per-date breakdown | **DB function** | Uses `location_on(employee, date)`: skips that location's weekly offs (`location_weekly_offs`), National/State holidays **and the employee's own approved optional holidays** (LR-6, LR-20); returns the skipped dates and reasons so the UI/agent can explain |
+| Day status (`v_day_status`) | **DB view/function** | Precedence AR-9 over a generated calendar × employee, joining attendance, `leave_request_days`, `wfh_requests`, holidays, approved optional holidays, weekly offs, employment dates |
+| Late / punch status / worked minutes | **Inside `v_day_status`** (computed, never stored) | Re-evaluated on every read, so a regularisation or a changed threshold applies identically everywhere |
 | Late-LOP per month | **DB function** `month_summary()` | `floor(late/3) × 0.5` (AR-6) |
 | Leave balance (`v_leave_balance`), accrual, pro-rating, carry-forward | **DB view + functions** | Pure functions of data and date (LR-2…LR-5) |
 | Apply / approve / reject / cancel leave | **DB RPCs** (`apply_leave`, `decide_leave`, `cancel_leave`) | One transaction: lock employee row → recompute days → check overlap, back-dating, balance, certificate → write request + day rows (+ LOP split) → write `email_outbox` + audit |
@@ -258,11 +295,31 @@ RLS is **enabled on every table**; `anon` has no access; `authenticated` has onl
 | Holiday added → release leave days (LR-11) | **DB trigger/RPC** | Restores balance automatically because balance is derived |
 | Month-end summary | **DB function** `month_summary(month, scope)` | The CSV is a rendering of this; invariant test LR-18 |
 | Input parsing, forms, mapping DB errors to user messages | **Server TS** (zod) | |
-| Email sending, retries | **Server TS** (reads `email_outbox`) | Network I/O doesn't belong in a transaction |
+| Email sending, retries | **Server TS** (reads `email_outbox`) | Network I/O doesn't belong in a transaction. The server action attempts delivery right after the commit; a daily Vercel cron (Hobby plan allows once a day) retries `pending`/`failed` rows |
 | File upload/signed URLs, CSV streaming, masking in presentation | **Server TS** | CSV passes through `mask.ts` (defence in depth; the summary has no statutory fields by design) |
 | Agent orchestration, guardrails, drafts, logs | **Server TS** | Tools are thin wrappers over the DB functions above |
 
 *Why not TS-only?* Concurrency (two simultaneous approvals) and "any caller" safety. *Why not DB-only?* Email, files, and the LLM can't live in the database.
+
+### 6.1 RPC and view catalogue (DESIGN.md binds every button to one of these)
+
+All RPCs derive the actor from the JWT, take no `actor_id`, are `GRANT`ed to `authenticated` only, re-check role inside, write audit/outbox rows in the same transaction, and return typed errors the UI maps to messages.
+
+| Module | RPC | Used by |
+|---|---|---|
+| Employees | `hr_create_employee`, `hr_update_employee`, `hr_update_statutory`, `hr_update_bank`, `transfer_employee`, `deactivate_employee`, `update_my_contact`, `reveal_statutory(employee_id, field)` | Add/Edit employee, Profile, Directory |
+| Attendance | `check_in`, `check_out`, `request_wfh`, `decide_wfh`, `request_optional_holiday`, `decide_optional_holiday`, `request_regularisation`, `decide_regularisation`, `cancel_request(kind, id)`, `hr_correct_attendance(reason)` | Dashboard, My attendance, Holiday calendar, Approvals |
+| Leave | `preview_leave` (dry run of the exact `apply_leave` rules), `apply_leave`, `decide_leave`, `cancel_leave`, `hr_adjust_leave`, `count_working_days` | Apply leave, My leave, Approvals, agent |
+| Config | `hr_upsert_location`, `hr_set_weekly_offs`, `hr_upsert_department`, `hr_upsert_holiday`, `hr_upsert_leave_type_rule` | Settings |
+| Reports | `month_summary(month, scope)`, `log_month_export` | Reports |
+
+| View | Purpose |
+|---|---|
+| `v_day_status` | One row per employee per calendar day: final status, WFH flag, worked minutes, late flag, missing-checkout flag, partial-day fractions |
+| `v_leave_balance` | opening, accrued, adjusted, used, pending, available per employee/type/year |
+| `v_pending_approvals` | UNION of pending leave, regularisation, WFH and optional-holiday requests the caller may decide |
+| `v_team_members`, `v_my_manager`, `v_managers` | Safe people views (no DOB/email) |
+| `v_statutory_masked`, `v_bank_masked` | Masked reads; no raw access |
 
 ---
 
@@ -281,12 +338,12 @@ Vercel AI SDK, `streamText` with typed tools and a multi-step loop; provider **G
 | Tool | Input (zod) | Output (allow-listed) | Who | Type |
 |---|---|---|---|---|
 | `get_my_leave_balance` | `{ year?: int }` (default current IST year) | `[{type_code, type_name, opening, accrued, adjusted, used, pending, available}]` | all | read |
-| `get_holidays` | `{ month: "YYYY-MM" }` | `{location, holidays:[{date, weekday, name, type}]}` for the user's location | all | read |
-| `count_working_days` | `{ from_date, to_date, is_half_day? }` | `{working_days, skipped:[{date, weekday, reason: "weekly_off"\|"holiday", name?}], location}` | all | read |
+| `get_holidays` | `{ month: "YYYY-MM" }` | `{location, holidays:[{date, weekday, name, type, my_optional_status?: none\|pending\|approved}]}` for the user's own location (optional days show the user's request status and remaining optional-holiday quota) | all | read |
+| `count_working_days` | `{ from_date, to_date, is_half_day? }` | `{working_days, skipped:[{date, weekday, reason: "weekly_off"\|"holiday"\|"optional_holiday", name?}], location}` — computed for the signed-in employee (location and approved optional holidays included) | all | read |
 | `explain_policy` | `{ topic: string }` | `{found: boolean, excerpts:[{key, title, text, version}]}` from `policy_documents` only | all | read |
 | `draft_leave_request` | `{ leave_type_code, from_date, to_date, is_half_day?, half_day_session?, reason }` | `{draft_id, summary:{type, dates, days, lop_days, balance_after, warnings[], certificate_required}}` — runs `apply_leave` in **dry-run** (same rules), stores an `agent_drafts` row; **submits nothing** | all | write, confirmed |
 | `get_team_today` | `{}` | `[{employee_code, name, status: present\|wfh\|on_leave\|absent\|not_checked_in\|weekly_off\|holiday}]` — **direct reports only** (HR: all) | managers, HR | read |
-| `summarise_pending_approvals` | `{}` | `[{request_id, kind: leave\|regularisation, name, type, dates, days, reason (≤200 chars, tagged as untrusted), available_balance, clashes:[names]}]` | managers, HR | read |
+| `summarise_pending_approvals` | `{}` | `[{request_id, kind: leave\|regularisation\|wfh\|optional_holiday, name, type, dates, days, reason (≤200 chars, tagged as untrusted), available_balance, clashes:[names]}]` | managers, HR | read |
 | **Extra (my choice):** `hr_month_end_check` | `{ month: "YYYY-MM" }` | `{flagged:[{employee_code, name, late_marks, missing_checkouts, pending_items}], draft_id}` — also drafts a reminder email (`agent_drafts.kind='hr_reminder_email'`) that HR confirms by button; the email is queued only on confirm | HR | read + write, confirmed |
 
 Tool descriptions are written like instructions to a new colleague (when to use, when *not* to, what a date format is), and the agent cannot approve, reject, cancel, or edit anything — **there is no tool for it**.
@@ -306,7 +363,7 @@ Tool descriptions are written like instructions to a new colleague (when to use,
 |---|---|
 | Acts as the signed-in user | Tool layer builds the Supabase client from the user's token; ctx from session |
 | No sensitive data to the model | Output allow-list schemas per tool (zod `.strict()` projection); sensitive tables not reachable by any tool; a final regex scan blocks 10–12-digit and PAN-shaped strings in tool results and in the assistant's text |
-| Writes are drafts confirmed by a human | The only write tools create `agent_drafts`; **Confirm** is a server action invoked by a button click that re-runs the full rules via the normal RPC; drafts expire in 15 min; the confirm card is rendered **from the stored payload by code**, not from model prose |
+| Writes are drafts confirmed by a human | The only write tools create `agent_drafts`; **Confirm** is a server action invoked by a button click that verifies the draft's owner is the signed-in employee, its status is `draft` and it has not expired, then re-runs the full rules via the normal RPC; drafts expire in 15 min; the confirm card is rendered **from the stored payload by code**, not from model prose |
 | Agent cannot approve/reject/cancel | No such tool exists; approvals remain in the Approvals inbox |
 | Numbers come from code | Post-check: every number/date in the final answer must occur in a tool result of the same turn (or the IST date in the prompt); otherwise the answer is replaced with a safe fallback ("I couldn't verify that number — please check My Leave"). A deterministic heuristic, so it is also covered by the attack-prompt tests |
 | Policy answers only from stored text | `explain_policy` returns `found:false` when nothing matches; the system prompt requires "I don't know / ask HR"; test `P-011` |
@@ -395,7 +452,7 @@ Rules: modules import `src/lib` and other modules' `index.ts` only; `lib/supabas
 | R4 | Clerk→Supabase JWT/RLS integration misconfigured (calls silently run as `anon`) | Do it in Checkpoint 3–5 before any feature; pgTAP/integration test "as Clerk user X, `current_employee_id()` = X" |
 | R5 | Email deliverability on Resend free sandbox (only owner address) | Verify a domain if available; else seed employees with plus-addressed emails of the owner; outbox + retry; demo shows the `email_outbox` row regardless |
 | R6 | Supabase free project pauses after inactivity; free-tier AI limit hit during demo | Keep-alive request before demo; agent degrades gracefully; fallback model |
-| R7 | Retro-active edits (weekly off/holiday changes) alter past month results | Audit config edits; warn HR when editing dates in a month already exported; known limitation noted for the demo |
+| R7 | Retro-active edits (weekly off/holiday/leave-rule/location changes) alter past results after payroll export | Effective-dated `location_weekly_offs`, `employee_location_history`, `leave_type_rules`; `month_exports` hash warns on re-export and blocks weekly-off changes inside exported months; config edits audited. Holidays added for past dates and `policy_settings` constants remain editable (migration + decision log) — accepted, noted for the demo |
 | R8 | Law changed (Labour Codes) | Legal refs live in `policy_documents`; RESEARCH §12 checklist |
 
 ### 10.3 Test traceability
@@ -403,22 +460,28 @@ Every item in the brief's testing checklist (p.19–20) becomes an automated tes
 
 ---
 
-## 11. Open questions for sign-off (my proposed default in bold)
+## 11. Open questions — resolved
 
-| ID | Question | Default |
-|---|---|---|
-| **OQ-1** | Brief p.8 says Aadhaar is "never displayed unmasked anywhere"; p.15 says masked "unless HR explicitly clicks Reveal"; checklist p.19 says "Aadhaar is never shown in full". Which wins? | **Aadhaar never revealable (strictest); Reveal exists for PAN and bank number only, logged.** |
-| OQ-2 | Is a Half Day (4–<8 h) paid as 0.5 present + 0.5 LOP? | **Yes (AR-5)** |
-| OQ-3 | Optional holiday: working day by default, taken as CL? | **Yes (RESEARCH §6)** |
-| OQ-4 | WFH day: Present regardless of hours and Late? | **Yes (AR-7)** |
-| OQ-5 | Check-in with no check-out → Absent until regularised? | **Yes (AR-8)** |
-| OQ-6 | Month-end CSV: brief table says managers download "own team", L8 says "HR downloads". | **HR all; managers own direct reports** |
-| OQ-7 | Maternity counts calendar days though policy says "working days only" | **Yes — statutory exception (LR-12)** |
-| OQ-8 | Pro-rating rounding and 15th-of-month cut-off | **As LR-3** |
-| OQ-9 | Top-of-hierarchy / HR Admin leave approver | **As LR-19** |
-| OQ-10 | Balance validated as of request date; for next-year portions as of 1 Jan of that year | **Yes** |
-| OQ-11 | Aadhaar encrypted at app layer (write-only) vs plain column under RLS | **Encrypted, write-only** |
-| OQ-12 | Do Late rules apply at both locations (plant has fixed timings, Konkan says fixed) | **Yes, same 10:15 cut-off** |
+"Owner" = the project owner's written resolutions of 2026-10-17. "Accepted default" = I proposed a default in the draft, the owner did not object when instructing sign-off, and it is therefore adopted; any of these can be reopened through the decision log.
+
+| ID | Question | Resolution | Basis |
+|---|---|---|---|
+| OQ-1 | Aadhaar reveal? | **Never revealable anywhere.** UI shows `XXXX XXXX 1234` only. PAN and bank account number: HR Admin may Reveal, each click audit-logged. (LR-22) | Owner |
+| OQ-2 | Half Day (4 h to < 8 h) | **0.5 Present + 0.5 LOP**, unless covered by an approved half-day leave (then 0.5 Present + 0.5 On Leave). (AR-5) | Owner |
+| OQ-3 | Optional holidays | **Up to 2 per calendar year; manager approval; once approved a paid public holiday, zero leave deduction.** *(Changes the draft default of "working day taken as CL".)* (LR-20) | Owner |
+| OQ-4 | WFH | **1.0 Present upon manager approval.** *(Changes the draft default; adds an approval step to brief item A3.)* (AR-7) | Owner |
+| OQ-5 | Check-in without check-out | Absent (missing check-out) until regularised. (AR-8) | Accepted default |
+| OQ-6 | Month-end CSV access | HR: all; Manager: own direct reports. | Accepted default |
+| OQ-7 | Maternity | **26 calendar weeks (182 days), continuous; calendar days; zero deduction from CL/SL/EL.** Flat 26 weeks for all (≥ the statutory floor). (LR-12) | Owner |
+| OQ-8 | Pro-rating | **Nearest 0.5.** Joining 1–15 July → 4.0 CL, 3.5 SL; joining 16–31 July → 3.5 / 3.0 (the 15th-of-month rule is retained; exact quarters round up). (LR-3) | Owner (15th rule: clarification) |
+| OQ-9 | Top-of-hierarchy / HR Admin approver | No manager → an HR Admin approves; HR Admin's own request → their manager. (LR-19) | Accepted default |
+| OQ-10 | Balance check date | As of the request date; next-year portions as of 1 Jan of that year. | Accepted default |
+| OQ-11 | Aadhaar storage | Application-layer encrypted, write-only (+ last 4 digits). | Owner |
+| OQ-12 | Late rule at both sites | Same 10:15:00 IST cut-off at Panaji and Verna. | Accepted default |
+| OQ-13 | Paternity | **5 consecutive working days** in one request, zero deduction; no frequency cap imposed (HR reviews). (LR-12) | Owner (no cap: default) |
+| OQ-14 | Sandwich rule | **None.** Weekly offs (Panaji Sat+Sun, Verna Sun) and holidays inside a leave span are never counted. Plant Fri→Mon = 3 days, head office Fri→Mon = 2. (LR-6) | Owner |
+| OQ-15 | When can the CSV be exported? | Only for months that have ended (IST); pending requests trigger a confirm. (DESIGN S13) | Accepted default (new, from DESIGN) |
+| OQ-16 | Maternity 80-day service rule | Retained from the statute; the owner may waive it. | Accepted default (new) |
 
 ---
 
@@ -426,7 +489,70 @@ Every item in the brief's testing checklist (p.19–20) becomes an automated tes
 
 | Date | Decision / change | Reason | By |
 |---|---|---|---|
-| 2026-10-17 | Initial draft of stack, data model, access control, agent design (this document) | Checkpoint 2 | owner + Claude Code draft |
+| 2026-10-17 | Initial draft of stack, data model, access control, agent design | Checkpoint 2 | owner + Claude Code draft |
 | 2026-10-17 | `leave_balances` removed in favour of calculated `v_leave_balance` (+ `leave_opening_balances`, `leave_adjustments`) | Stored balances drift; see §4 | draft |
 | 2026-10-17 | Service-role key limited to seed, first-login link, email worker | Keep RLS meaningful and keep key away from agent | draft |
-| *pending* | **Sign-off (faculty/owner)** — record date and the resolution of OQ-1…OQ-12 here | Required before Checkpoint 3 | — |
+| 2026-10-17 | Business-rule resolutions OQ-1…OQ-16 recorded (§11) | Owner instruction | owner |
+| 2026-10-17 | Added `wfh_requests` and `optional_holiday_requests`; Approvals inbox now has four request types; `count_working_days` takes the employee (own approved optional holidays) | Owner decisions on WFH and optional holidays | owner / review |
+| 2026-10-17 | Senior-architect review (§13) changes: `location_weekly_offs`, `employee_location_history`, `leave_type_rules` (all effective-dated); `month_exports`; attendance stores facts only (derived fields removed); browser never talks to Supabase; no `actor_id` in RPCs; explicit `REVOKE … FROM PUBLIC` rule; holidays readable by all | Prevent history rewrites and bypass paths before code exists | review |
+| 2026-10-17 | `DESIGN.md` created; product name **Kinara**, logo `docs/brand/kinara-logo.svg` | Checkpoint 2 | owner / draft |
+| 2026-10-17 | **Owner sign-off of ARCHITECTURE.md rev 2 and DESIGN.md rev 1 recorded.** | Owner instruction to resolve questions and complete Checkpoint 2 | owner |
+| *pending* | **Faculty sign-off** — record date and any required changes here. Required by the brief (p.16, p.18) **before Checkpoint 3**. | Brief: "No application code until reviewed" | faculty |
+
+---
+
+## 13. Senior-architect review (brief p.16 prompt)
+
+Performed 2026-10-17 on `ARCHITECTURE.md`, `DESIGN.md` and `RESEARCH.md` using the brief's four questions. Ranked by risk. **Fixed** = changed in this revision; **Accepted** = knowingly left, reason given. *Caveat: this is a self-review by the same author; the brief wants the plan-mode critique run too — a second, independent pass by the faculty/reviewer subagent is still advisable.*
+
+### 13.1 Places a role check could be bypassed
+
+| # | Risk | Status |
+|---|---|---|
+| B-1 | **Supabase grants `EXECUTE` on new functions to `PUBLIC`/`anon` by default**, and views owned by the DB owner bypass RLS; an exposed RPC or view could be called straight through PostgREST. | **Fixed:** §5 *Execution privileges* (revoke from PUBLIC/anon, grant to `authenticated`, helpers in `private` schema, pgTAP enumerates every function/view) |
+| B-2 | **Browser calling Supabase directly** with a public key would make RLS the only gate and widen the surface. | **Fixed:** browser never receives Supabase URL/keys (§2); all DB access via server actions |
+| B-3 | **Actor spoofing:** an RPC that accepts an employee/actor id could be called for someone else. | **Fixed:** no RPC takes `actor_id`; actor derived from JWT (§2, §6.1) |
+| B-4 | **First-login linking by email:** if HR mistypes an email, whoever owns that verified email could link to the record. | **Mitigated** (Clerk invite-only, verified email, links only when `clerk_user_id IS NULL`, HR sees "Invite pending"). **Accepted residual:** HR must verify addresses; no self-service relink; later email edits do not re-link |
+| B-5 | **Reveal leakage** (PAN/bank in caches, logs, URLs, CSV). | **Fixed:** `no-store`, never in URL/log/CSV/agent context, 30 s re-mask, HR-only, audit-logged, no Aadhaar branch in the RPC. **Accepted:** the revealed value is in the HR user's browser memory while shown |
+| B-6 | **Agent draft confirmation IDOR** (confirming someone else's draft). | **Fixed:** `confirm_draft` checks owner = session employee, status = draft, not expired, then re-runs the full rules (DESIGN S14; §7.5) |
+| B-7 | **Decision on own request** across four request types. | **Fixed:** one rule (LR-21) enforced in every `decide_*` RPC; own requests never appear in the inbox |
+| B-8 | **Manager scope drift:** a manager approving after the employee changed manager. | **Fixed by design:** authority is dynamic at decision time (current manager or HR), not stored at submission |
+| B-9 | **Audit trail itself leaking** statutory values. | **Fixed:** values stored masked; table append-only |
+
+### 13.2 Decisions that would be expensive to change later
+
+| # | Risk | Status |
+|---|---|---|
+| C-1 | **Employee transfers rewrote history:** past Saturdays flipping from Weekly Off to Absent after a Panaji→Verna move. | **Fixed:** `employee_location_history` + `location_on(employee, date)` |
+| C-2 | **Weekly-off edits changed past months** (and already-exported payroll figures). | **Fixed:** `location_weekly_offs` effective-dated; `month_exports` blocks edits inside exported months and flags changed figures |
+| C-3 | **Leave rule edits rewrote past balances** (carry-forward of EL recomputes). | **Fixed:** `leave_type_rules` versioned by year; edits apply from the current or next year only |
+| C-4 | **Stored derived attendance fields** (late, punch status, worked minutes) would go stale on any threshold change. | **Fixed:** removed; computed in `v_day_status` |
+| C-5 | `leave_request_days.is_active` duplicates request status. | **Mitigated:** only RPCs write it; pgTAP invariant "is_active ⇔ status in (pending, approved)" |
+| C-6 | Email delivery depends on Vercel cron; Hobby allows one run per day. | **Fixed:** send-after-commit attempt + daily retry (§6). **Accepted:** a failed first attempt may be delayed up to a day |
+| C-7 | `policy_settings` constants (10:15, 3 lates, 30 days) and past-dated holidays remain retro-editable. | **Accepted:** migration + decision-log entry; `month_exports` warns on re-export (R7) |
+| C-8 | Day status is computed on read. | **Accepted:** 180 employees × ~31 days is trivial; revisit only if it ever exceeds a second to render |
+
+### 13.3 Gaps or contradictions with the business rules
+
+| # | Finding | Status |
+|---|---|---|
+| A-1 | **WFH approval** (owner decision) departs from brief item A3 ("employee marks a day as WFH") and changes the agent (`summarise_pending_approvals`), inbox and CSV. | **Fixed + flagged:** `wfh_requests`, inbox tab, AR-7. **For the faculty:** this is an intentional extension; it is not in the brief's checklist |
+| A-2 | **Optional holidays** make working-day counts employee-specific, can collide with leave, and have a cap that races under concurrent clicks. | **Fixed:** `count_working_days(employee, …)`; collision rules in LR-20; cap enforced under the employee row lock; unique key per (employee, holiday) |
+| A-3 | **Maternity counts calendar days**, so weekly offs/holidays inside it are "On Leave" and are counted in the CSV's leave column; the reconciliation invariant must still hold. | **Fixed:** AR-9 precedence (leave beats weekly off) and LR-18 invariant include ML days; pgTAP case with a maternity span |
+| A-4 | **"Joining in July → 4.0 / 3.5"** holds only for 1–15 July under the 15th-of-month rule (16–31 July → 3.5 / 3.0). | **Clarified** in LR-3 and OQ-8; **confirm with the owner** that the 15th rule is wanted |
+| A-5 | **Flat 26 weeks** exceeds the statutory 12 weeks for a third child and keeps the 80-day eligibility rule. | **Fine legally** (policy ≥ statute); recorded in OQ-7/OQ-16 |
+| A-6 | **Half Day = 0.5 LOP** means a 5-hour day costs half a day's pay; employees may be surprised. | **Accepted** (owner decision); S5 shows a Half Day explanation text |
+| A-7 | **Emails**: the brief (L6) requires leave emails only. Regularisation, WFH and optional-holiday decisions are in-app only in v1. | **Accepted** as scope control |
+| A-8 | **Manager "Request only" for attendance corrections** (brief p.5) is ambiguous. | **Resolved:** managers decide employees' regularisation requests; only HR edits records directly, with a mandatory reason (DESIGN S6) |
+| A-9 | **Brief contradictions** on Aadhaar (p.8 vs p.15 vs p.19) and CSV audience (p.5 vs L8). | **Resolved** by OQ-1 and OQ-6 |
+
+### 13.4 Screens with no supporting table or field
+
+Checked every element in DESIGN.md S1–S14 against §3. **Initially unbound, now fixed:** WFH request/approval, optional-holiday choice, export history, "Invite pending" (derived from `employees.clerk_user_id IS NULL`), holiday-site toggle (holidays readable by all), weekly-off change dialog, leave-rule editor, transfer dialog. **Remaining unbound elements: none.** (Resend-invite calls Clerk and writes nothing to the DB — intentional.)
+
+### 13.5 Residual risks carried into the build
+
+1. Clerk→Supabase JWT/RLS wiring must be proven in Checkpoint 3–5 before any feature (R4).
+2. Statutory figures in RESEARCH.md are still **unverified against primary texts** (RESEARCH §12).
+3. Free-tier model limits unknown until build day (§7.6).
+4. This review was done by the author; faculty review is the independent check.

@@ -14,7 +14,7 @@ Out of scope (do not build): payroll/salary, PF/ESI/PT/TDS computation, recruitm
 ## Current phase
 
 Checkpoints 1–2 (paper only): `RESEARCH.md`, `ARCHITECTURE.md`, `DESIGN.md`, `CLAUDE.md`.
-**Write NO application code** (no React/Next.js, SQL, migrations or backend setup) until the owner has signed off `ARCHITECTURE.md` and `DESIGN.md`. Sign-off is recorded in the decision log at the bottom of `ARCHITECTURE.md`.
+**Write NO application code** (no React/Next.js, SQL, migrations or backend setup) until **faculty** sign-off of `ARCHITECTURE.md` and `DESIGN.md` is recorded in the decision log (§12 of `ARCHITECTURE.md`). Owner sign-off was recorded on 2026-10-17; faculty sign-off is still pending — check §12 before starting Checkpoint 3.
 
 ## Source of truth (read before changing anything)
 
@@ -39,9 +39,10 @@ Next.js (App Router, TypeScript) on Vercel · Supabase Postgres (RLS on) · Cler
 4. **Sensitive data**: Aadhaar, PAN and bank numbers are masked in every screen, API response, log and CSV. Aadhaar is never shown unmasked anywhere. Raw statutory/bank tables are never selected directly by the app; use the masked views/RPCs. Never send these values to the AI model, not even masked.
 5. **One implementation of each business rule**, in the database (working-day count, day status, leave balance, apply/approve/cancel). UI, CSV and agent tools call it; TypeScript must not re-implement it.
 6. **AI agent**: acts as the signed-in user, uses the same server functions and role checks, has no service key/DB credentials, every write is a draft a human confirms by button, numbers come from tools only, max 5 tool calls per question, every call logged to `agent_log`.
-7. **Employee code never changes** and is never reused. Employees are deactivated, never deleted.
-8. **Tests before features.** Turn each testing-checklist item (brief p.19–20) into an automated test first, then implement. Cite rule IDs in test names.
-9. Keep changes small; read every diff before committing; commit per checkpoint with a clear message and push to the designated branch.
+7. **Four request types, one approval rule** (leave, regularisation, WFH, optional holiday): decided only by the requester's current direct manager or an HR Admin, never by the requester (RESEARCH LR-21). The acting user always comes from the JWT; no RPC takes an `actor_id`. The browser never talks to Supabase directly.
+8. **Employee code never changes** and is never reused. Employees are deactivated, never deleted.
+9. **Tests before features.** Turn each testing-checklist item (brief p.19–20) into an automated test first, then implement. Cite rule IDs in test names.
+10. Keep changes small; read every diff before committing; commit per checkpoint with a clear message and push to the designated branch.
 
 ## Working style in Claude Code
 
