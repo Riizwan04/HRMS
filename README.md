@@ -10,4 +10,4 @@ Status: Checkpoint 3 (fresh setup) in progress. Design documents: `RESEARCH.md`,
 2. Copy `.env.example` to `.env.local` and fill in the values (never commit it).
 3. `npm run dev` and open http://localhost:3000
 
-Live URL: _TBD_ · Test logins per role: _TBD (added at the seed checkpoint)_
+Live URL: https://hrms-ten-flame.vercel.app · Test logins per role: _TBD (added at the seed checkpoint)_
