@@ -13,8 +13,8 @@ language sql stable security definer set search_path = public, private, pg_temp 
   select e.id from public.employees e
   where e.clerk_user_id is not null
     and e.clerk_user_id = private.auth_sub()
-    and e.status = 'active'
-    and (e.last_working_day is null or e.last_working_day >= private.today_ist())
+    -- Access runs through the last working day inclusive, whatever the status flag says (DV-12).
+    and ((e.last_working_day is null and e.status = 'active') or e.last_working_day >= private.today_ist())
 $$;
 
 create function private.is_hr_admin() returns boolean

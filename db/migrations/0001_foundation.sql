@@ -27,6 +27,8 @@ alter default privileges revoke execute on functions from public;
 do $$
 begin
   execute format('alter database %I set timezone to %L', current_database(), 'Asia/Kolkata');
+  -- JIT compilation added ~3 s to every rule query (measured); our queries are small and short-lived.
+  execute format('alter database %I set jit to off', current_database());
 end $$;
 
 create table public.policy_settings (

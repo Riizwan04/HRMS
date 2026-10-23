@@ -83,7 +83,7 @@ declare
 begin
   select e.date_of_joining, e.last_working_day into doj, lwd from public.employees e where e.id = emp;
   r := private.rule_for(p_type, p_year);
-  if r is null or doj is null then return 0; end if;
+  if r.leave_type_id is null or doj is null then return 0; end if;
   if extract(year from doj)::int > p_year then return 0; end if;
   if r.accrual_method = 'upfront_prorated' then
     if extract(year from doj)::int = p_year then
@@ -124,7 +124,7 @@ declare
 begin
   select e.date_of_joining into doj from public.employees e where e.id = emp;
   r := private.rule_for(p_type, p_year);
-  if r is not null and r.carry_forward_max is not null and r.carry_forward_max > 0
+  if r.leave_type_id is not null and r.carry_forward_max is not null and r.carry_forward_max > 0
      and p_year - 1 >= extract(year from doj)::int then
     carry := least(r.carry_forward_max, greatest(private.leave_closing(emp, p_type, p_year - 1), 0));
   end if;
