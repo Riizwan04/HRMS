@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { BalanceCard } from "@/components/balance-card";
 import { AppShell } from "@/components/app-shell";
-import { Button } from "@/components/ui/button";
+import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { formatDateTimeIST, formatTimeIST } from "@/lib/time/ist";
 import { sample, type Role } from "@/lib/preview-data";
@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
   const { team, org } = sample;
 
   return (
-    <AppShell role={role} active="home" enabled={["home"]} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell role={role} active="home" enabled={["home", "leave"]} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2 text-sm">
         <span className="px-2 font-medium text-muted">Preview with sample data. View as:</span>
         {ROLES.map((r) => (
@@ -39,7 +39,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
       <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_1fr]">
         <CheckInCard inTime={formatTimeIST(sample.checkInIso)} />
         <Card className="min-w-0">
-          <CardHeader title="Leave balance (2026)" action={<Button size="sm" variant="secondary">Apply for leave</Button>} />
+          <CardHeader title="Leave balance (2026)" action={<LinkButton href={`/preview/leave/apply?role=${role}`} size="sm" variant="secondary">Apply for leave</LinkButton>} />
           <CardBody className="flex gap-3 overflow-x-auto">
             {sample.balances.map((b) => <BalanceCard key={b.code} {...b} />)}
           </CardBody>

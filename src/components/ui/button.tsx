@@ -1,6 +1,7 @@
 import clsx from "clsx";
 import { Loader2 } from "lucide-react";
-import type { ButtonHTMLAttributes } from "react";
+import Link from "next/link";
+import type { ButtonHTMLAttributes, ComponentProps } from "react";
 
 type Variant = "primary" | "secondary" | "destructive" | "ghost";
 type Size = "sm" | "md" | "lg";
@@ -33,5 +34,15 @@ export function Button({ variant = "primary", size = "md", loading, className, c
       {loading && <Loader2 className="size-4 animate-spin" aria-hidden />}
       {children}
     </button>
+  );
+}
+
+/** A link that looks like a Button (navigation, not an action). */
+export function LinkButton({ variant = "primary", size = "md", className, ...rest }: ComponentProps<typeof Link> & { variant?: Variant; size?: Size }) {
+  return (
+    <Link
+      {...rest}
+      className={clsx("inline-flex items-center justify-center gap-2 rounded-lg font-semibold transition-colors", variants[variant], sizes[size], className)}
+    />
   );
 }
