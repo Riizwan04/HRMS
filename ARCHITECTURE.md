@@ -50,7 +50,7 @@ Numbers **①–⑥ mark every place a role/authorization check happens.**
 flowchart LR
   B[Browser<br/>React UI<br/>Clerk session cookie]
   subgraph V[Vercel - Next.js app server]
-    MW["middleware<br/>① authenticated? (Clerk)"]
+    MW["proxy.ts (Next 16 name for middleware)<br/>① authenticated? (Clerk)"]
     SA["Server Components / Server Actions / Route Handlers<br/>② requireEmployee(): row exists, status=active,<br/>today(IST) ≤ last_working_day<br/>③ requireRole() + object-level check<br/>(is HR? manager of THIS employee? own row?)"]
     AG["Agent route + tool layer<br/>④ same ②③ applied per tool call<br/>⑤ 5-call cap, output allow-lists, log first"]
     EM[Email sender<br/>reads email_outbox]
@@ -426,7 +426,7 @@ Gemini and Groq limits changed repeatedly in 2026 and secondary sources conflict
 │   │   ├── email/       {send.ts, templates/}
 │   │   ├── validation/  {indian-fields.ts}   # regexes mirrored from DB CHECKs
 │   │   └── ui/          # design-system components per DESIGN.md
-│   └── middleware.ts
+│   └── proxy.ts                      # Next 16: "middleware" was renamed "proxy"
 └── tests/
     ├── leave/  attendance/  employees/  agent/   # one folder per module; E2E in tests/e2e
 ```
@@ -497,6 +497,8 @@ Every item in the brief's testing checklist (p.19–20) becomes an automated tes
 | 2026-10-17 | Senior-architect review (§13) changes: `location_weekly_offs`, `employee_location_history`, `leave_type_rules` (all effective-dated); `month_exports`; attendance stores facts only (derived fields removed); browser never talks to Supabase; no `actor_id` in RPCs; explicit `REVOKE … FROM PUBLIC` rule; holidays readable by all | Prevent history rewrites and bypass paths before code exists | review |
 | 2026-10-17 | `DESIGN.md` created; product name **Kinara**, logo `docs/brand/kinara-logo.svg` | Checkpoint 2 | owner / draft |
 | 2026-10-17 | **Owner sign-off of ARCHITECTURE.md rev 2 and DESIGN.md rev 1 recorded.** | Owner instruction to resolve questions and complete Checkpoint 2 | owner |
+| 2026-10-23 | **Owner authorised starting Checkpoint 3 before faculty sign-off was recorded** (faculty approval in progress). Owner accepts that later faculty changes to ARCHITECTURE/DESIGN may require rework. | Time pressure; owner's call | owner |
+| 2026-10-23 | Scaffold uses the installed Next.js 16.4 / React 19 / Tailwind 4. `middleware.ts` is named **`proxy.ts`** in this version (verified in the bundled docs). It remains an authentication-only gate ①; authorization stays in ②③⑥. Vercel/Supabase/Clerk hosts are not reachable from the Claude cloud container, so Vercel deploys from GitHub pushes and database work runs from the owner's machine or after network allow-listing | Departure from §9 file name; environment constraint | owner / draft |
 | *pending* | **Faculty sign-off** — record date and any required changes here. Required by the brief (p.16, p.18) **before Checkpoint 3**. | Brief: "No application code until reviewed" | faculty |
 
 ---

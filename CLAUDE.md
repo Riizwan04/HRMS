@@ -14,7 +14,7 @@ Out of scope (do not build): payroll/salary, PF/ESI/PT/TDS computation, recruitm
 ## Current phase
 
 Checkpoints 1–2 (paper only): `RESEARCH.md`, `ARCHITECTURE.md`, `DESIGN.md`, `CLAUDE.md`.
-**Write NO application code** (no React/Next.js, SQL, migrations or backend setup) until **faculty** sign-off of `ARCHITECTURE.md` and `DESIGN.md` is recorded in the decision log (§12 of `ARCHITECTURE.md`). Owner sign-off was recorded on 2026-10-17; faculty sign-off is still pending — check §12 before starting Checkpoint 3.
+**Write NO application code** (no React/Next.js, SQL, migrations or backend setup) until **faculty** sign-off of `ARCHITECTURE.md` and `DESIGN.md` is recorded in the decision log (§12 of `ARCHITECTURE.md`). Owner sign-off was recorded on 2026-10-17; faculty sign-off is still pending. On 2026-10-23 the owner authorised starting Checkpoint 3 before it is recorded (logged in §12); if the faculty requests changes, update the docs first and rework as needed.
 
 ## Source of truth (read before changing anything)
 
@@ -57,4 +57,6 @@ Code is organised **by module** under `src/modules/{employees,attendance,leave,r
 
 ## Commands
 
-TBD at Checkpoint 3 (fresh setup). Add install/dev/test/lint commands here as soon as they exist.
+- Install: `npm install` · Dev server: `npm run dev` · Lint: `npm run lint` · Build: `npm run build`
+- Copy `.env.example` to `.env.local` and fill it in (never commit it). Add test commands here when Vitest/pgTAP/Playwright are set up.
+- This repo uses Next.js 16: the file formerly called `middleware.ts` is **`proxy.ts`**. Read `node_modules/next/dist/docs/` before using Next APIs from memory (see `AGENTS.md`).
