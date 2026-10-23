@@ -1,4 +1,6 @@
+import type { DayRow, DayStatusKey, MonthSummary } from "./attendance-types";
 import type { LeavePlan } from "./leave-plan";
+import { isoWeekday } from "./time/ist";
 
 // SAMPLE DATA for the /preview pages only. Removed when the screens are wired to the database.
 export type Role = "employee" | "manager" | "hr";
@@ -54,4 +56,47 @@ export const leaveScenarios: LeaveScenario[] = [
     plan: { errors: [{ code: "too_far_back", days: 30 }], days: 1, paid_days: 1, lop_days: 0, available: 8, pending: 0, balance_after: 7, needs_conversion: false, excess: 0, requires_document: false,
       breakdown: [day("2026-09-10", "Thu")] },
   },
+];
+
+/** Which preview pages exist (the shell shows the others as "soon"). */
+export const PREVIEW_ENABLED = ["home", "leave", "attendance"];
+
+const od = (day: string, status: DayStatusKey, extra: Partial<DayRow> = {}): DayRow => ({
+  day, status, is_wfh: false, is_late: false, worked_minutes: null, missing_checkout: false,
+  check_in: null, check_out: null, leave_type_code: null, off_name: null, ...extra,
+});
+const worked = (day: string, inT: string, outT: string, mins: number, extra: Partial<DayRow> = {}, status: DayStatusKey = "present") =>
+  od(day, status, { check_in: `${day}T${inT}+05:30`, check_out: `${day}T${outT}+05:30`, worked_minutes: mins, ...extra });
+
+// October 2026 for a head-office employee. Sample rows shaped like day_status() output.
+const octOverrides: Record<string, DayRow> = {
+  "2026-10-01": worked("2026-10-01", "09:50:00", "18:05:00", 495),
+  "2026-10-02": od("2026-10-02", "holiday", { off_name: "Gandhi Jayanti" }),
+  "2026-10-05": worked("2026-10-05", "09:58:00", "18:10:00", 492),
+  "2026-10-06": worked("2026-10-06", "10:22:00", "18:30:00", 488, { is_late: true }),
+  "2026-10-07": worked("2026-10-07", "09:40:00", "14:00:00", 260, {}, "half_day"),
+  "2026-10-08": od("2026-10-08", "present", { is_wfh: true }),  // approved WFH: 1.0 Present, no punches needed
+  "2026-10-09": od("2026-10-09", "absent", { check_in: "2026-10-09T09:30:00+05:30", missing_checkout: true }),
+  "2026-10-12": worked("2026-10-12", "09:55:00", "18:00:00", 485),
+  "2026-10-13": worked("2026-10-13", "10:31:00", "18:40:00", 489, { is_late: true }),
+  "2026-10-14": od("2026-10-14", "absent"),
+  "2026-10-15": od("2026-10-15", "on_leave", { leave_type_code: "CL" }),
+  "2026-10-16": od("2026-10-16", "in_progress", { check_in: "2026-10-16T09:58:00+05:30" }),
+  "2026-10-19": od("2026-10-19", "future", { pending_request: "WFH pending approval" }),  // pending has no effect (AR-7)
+  "2026-10-20": od("2026-10-20", "holiday", { off_name: "Optional One (your optional holiday)" }),
+  "2026-10-22": od("2026-10-22", "future", { pending_request: "CL pending approval" }),
+  "2026-10-23": od("2026-10-23", "future", { pending_request: "CL pending approval" }),
+};
+
+export const attendanceMonth: DayRow[] = Array.from({ length: 31 }, (_, i) => {
+  const day = `2026-10-${String(i + 1).padStart(2, "0")}`;
+  if (octOverrides[day]) return octOverrides[day];
+  return od(day, isoWeekday(day) >= 6 ? "weekly_off" : "future");
+});
+
+export const attendanceSummary: MonthSummary = { present: 5, wfh: 1, half: 1, absent: 2, leave: 1, lateMarks: 2, lateLimit: 3 };
+
+export const sampleRequests = [
+  { id: "r1", kind: "Regularisation", text: "Wed 14 Oct · 9:55 am to 6:00 pm", status: "Pending" },
+  { id: "r2", kind: "WFH", text: "Mon 19 Oct", status: "Pending" },
 ];

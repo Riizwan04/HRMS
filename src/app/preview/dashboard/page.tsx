@@ -4,7 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { formatDateTimeIST, formatTimeIST } from "@/lib/time/ist";
-import { sample, type Role } from "@/lib/preview-data";
+import { PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { CheckInCard } from "./check-in-card";
 
 export const metadata = { title: "Dashboard (preview) · Kinara" };
@@ -23,7 +23,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
   const { team, org } = sample;
 
   return (
-    <AppShell role={role} active="home" enabled={["home", "leave"]} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell role={role} active="home" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2 text-sm">
         <span className="px-2 font-medium text-muted">Preview with sample data. View as:</span>
         {ROLES.map((r) => (

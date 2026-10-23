@@ -33,3 +33,21 @@ export function StatusBadge({ status, wfh, pending, className }: { status: DaySt
     </span>
   );
 }
+
+import type { DayStatusKey } from "@/lib/attendance-types";
+
+/** Calendar cell look for every day-status value (same colours as the badges). */
+export function cellStyle(status: DayStatusKey): { cls: string; code: string; label: string } {
+  switch (status) {
+    case "present": return { cls: "bg-st-present-bg text-st-present", code: "P", label: "Present" };
+    case "half_day": return { cls: "bg-st-half-bg text-st-half", code: "½", label: "Half Day" };
+    case "absent": return { cls: "bg-st-absent-bg text-st-absent", code: "A", label: "Absent" };
+    case "on_leave": return { cls: "bg-st-leave-bg text-st-leave", code: "L", label: "On Leave" };
+    case "holiday": return { cls: "bg-st-holiday-bg text-st-holiday", code: "H", label: "Holiday" };
+    case "weekly_off": return { cls: "bg-st-off-bg text-st-off", code: "WO", label: "Weekly Off" };
+    case "in_progress": return { cls: "bg-surface text-text outline outline-2 -outline-offset-2 outline-primary", code: "•", label: "Today, in progress" };
+    case "pending": return { cls: "bg-surface text-muted outline outline-2 -outline-offset-2 outline-primary", code: "", label: "Today, not checked in" };
+    case "not_employed": return { cls: "bg-[repeating-linear-gradient(135deg,#e5e7eb_0_4px,#f8fafc_4px_8px)] text-muted", code: "", label: "Not employed" };
+    default: return { cls: "bg-surface text-muted", code: "", label: "" };
+  }
+}
