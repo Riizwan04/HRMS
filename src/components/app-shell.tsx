@@ -69,6 +69,7 @@ export function AppShell({ role, active, enabled, userName, dateLine, children }
             <span className="font-semibold">Kinara</span>
           </div>
           <p className="hidden text-sm text-muted sm:block">{dateLine}</p>
+          <span className="rounded-full border border-warning px-2.5 py-1 text-xs font-semibold text-warning" title="Prototype screens use sample data until sign-in and the database are connected">Demo · sample data</span>
           <button type="button" disabled title="The assistant is built later"
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-input px-3 text-sm font-semibold text-primary opacity-70">
             <MessageCircle className="size-4" aria-hidden /> Ask HR

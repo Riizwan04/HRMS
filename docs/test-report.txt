@@ -1,0 +1,19 @@
+Kinara HRMS - automated test report
+Generated: 2026-10-23 17:27 UTC
+
+== Database rules and security (pgTAP, PostgreSQL 16) ==
+db/tests/01_employee_master.test.sql .. ok
+db/tests/02_attendance.test.sql ....... ok
+db/tests/03_leave.test.sql ............ ok
+db/tests/04_security.test.sql ......... ok
+All tests successful.
+Files=4, Tests=188,  1 wallclock secs ( 0.07 usr  0.00 sys +  0.13 cusr  0.05 csys =  0.25 CPU)
+Result: PASS
+
+== IST time helpers (Vitest, run under 3 process time zones) ==
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+ Test Files  1 passed (1)
+      Tests  16 passed (16)
+ Test Files  1 passed (1)
+      Tests  16 passed (16)

@@ -1,13 +1,76 @@
 # Kinara — Konkan Coastal Foods HRMS
 
-Employee Master, Attendance and Leave, plus an HR assistant agent, for Konkan Coastal Foods (Panaji head office, Verna plant).
+Employee Master, Attendance and Leave, plus an HR assistant, for Konkan Coastal Foods (Panaji head office, Verna plant).
+Built for the *HRMS Build* assignment (AI Applications in HR).
 
-Status: Checkpoint 3 (fresh setup) in progress. Design documents: `RESEARCH.md`, `ARCHITECTURE.md`, `DESIGN.md`; working rules for Claude Code: `CLAUDE.md`.
+**Live demo:** https://hrms-ten-flame.vercel.app · **Status: work in progress (milestone 1 of 2 delivered, see below)**
 
-## Setup
+## What works today
 
-1. `npm install`
-2. Copy `.env.example` to `.env.local` and fill in the values (never commit it).
-3. `npm run dev` and open http://localhost:3000
+The screens below run on **sample data** (a "Demo · sample data" tag is shown on every page). The **business rules behind them are already
+implemented in the database and proven by 188 automated tests**. Connecting sign-in and the live database to these screens is the next milestone.
 
-Live URL: https://hrms-ten-flame.vercel.app · Test logins per role: _TBD (added at the seed checkpoint)_
+| Screen | What it shows | Brief reference |
+|---|---|---|
+| Home dashboard (Employee / Manager / HR views) | Check in/out, leave balances, pending requests, team and organisation cards | Suggested screens p.14 |
+| Apply for leave | Live working-days calculator (weekends/holidays skipped, no sandwich rule), balance after, convert excess to Loss of Pay, certificate rule | L3, L1 |
+| My leave | Balance breakdown (opening, accrued, adjusted, used, pending), history, confirmed cancel | L2, L5 |
+| My attendance | Colour-coded month calendar, Late marks, regularisation and WFH requests with validation | A2, A4, A5 |
+| Approvals inbox | Leave, regularisation, WFH and optional-holiday requests; comment rules; failure shown inline | L4, A5 |
+| Holiday calendar | Panaji 5-day vs Verna 6-day calendars, optional holidays (2 a year) | A7 |
+
+Screenshots: [`docs/screenshots`](docs/screenshots). Latest test run: [`docs/test-report.txt`](docs/test-report.txt).
+
+![Apply for leave](docs/screenshots/03-apply-leave.png)
+![My attendance](docs/screenshots/04-my-attendance.png)
+
+## What is built behind the screens (verified)
+
+- **Data model**: 27 PostgreSQL tables with keys and constraints, row-level security on every table, masked views for PAN/Aadhaar/bank, append-only audit log (`db/migrations`).
+- **Rules, single implementation in the database**: working-day count by location (weekly offs, holidays, approved optional holidays), leave balance (pro-rating to the nearest 0.5, Earned Leave carry-forward capped at 30, CL/SL lapse), day status (Present / Half Day / Absent / On Leave / Holiday / Weekly Off, Late after 10:15 IST, three Lates = half-day LOP), month-end summary with reconciliation.
+- **Actions**: apply / approve / reject / cancel leave (balance re-checked at approval), check-in/out (one record per day), WFH, optional holidays, regularisation, employee add/edit/deactivate, PAN/bank reveal (logged; Aadhaar can never be revealed), leave released automatically when a holiday is added.
+- **Security tests**: employees cannot open others' profiles, managers see only direct reports, nobody approves their own request, deactivated employees are locked out after the last working day, no function is open to the public, the runtime login owns nothing.
+
+**188 database tests + 16 IST tests (run under 3 time zones) pass.** See [`docs/test-report.txt`](docs/test-report.txt).
+
+## Milestones
+
+| Milestone | Status |
+|---|---|
+| 1. Research ([`RESEARCH.md`](RESEARCH.md)) | Done; statutory figures to be verified against primary texts |
+| 2. Architecture and design ([`ARCHITECTURE.md`](ARCHITECTURE.md), [`DESIGN.md`](DESIGN.md), [`CLAUDE.md`](CLAUDE.md)) | Done; faculty sign-off pending |
+| 3. Fresh setup, deployed | Done (Next.js on Vercel) |
+| 4. Database and rules | Done and tested locally; **not yet connected to the live app** |
+| 5. Login and roles | Next (Clerk sign-in, employee row linked by email) |
+| 6–10. Employee Master, Attendance, Leave, Approvals, Reports | Rules done; screens: 6 of 13 done (rest show "soon") |
+| 11. HR assistant agent | Designed ([`ARCHITECTURE.md`](ARCHITECTURE.md) section 7); not built |
+| 12. Test and polish | Ongoing |
+
+Not yet done, and shown as "soon" in the app: team attendance, leave calendar, employee directory and profile, add employee, reports (CSV), settings, the HR assistant, sign-in, the seed script with test logins.
+
+## Run it
+
+```bash
+npm install
+npm run dev          # http://localhost:3000   (prototype screens use sample data)
+npm run lint && npm run typecheck
+npm run test:tz      # IST helper tests under 3 time zones
+npm run test:db      # database rules + security tests (needs local PostgreSQL 16 with pgTAP)
+```
+
+Environment variables are listed, blank, in [`.env.example`](.env.example). No secrets are committed.
+
+## Stack
+
+Next.js 16 (App Router, TypeScript, Tailwind) on Vercel · Neon PostgreSQL (row-level security) · Clerk (authentication only) · Vercel Blob · Resend · Vercel AI SDK. Reasons and rejected alternatives: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## Repository map
+
+```
+RESEARCH.md  ARCHITECTURE.md  DESIGN.md  CLAUDE.md   design documents (rules have IDs: LR-*, AR-*, DV-*)
+db/migrations   the database: tables, rules, actions, security
+db/tests        pgTAP tests citing the rule IDs
+src/lib/time    IST helpers (the only code allowed to touch clocks)
+src/app/preview prototype screens on sample data
+docs/           screenshots, test report, logo
+```
