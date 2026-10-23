@@ -59,7 +59,7 @@ export const leaveScenarios: LeaveScenario[] = [
 ];
 
 /** Which preview pages exist (the shell shows the others as "soon"). */
-export const PREVIEW_ENABLED = ["home", "leave", "attendance", "approvals"];
+export const PREVIEW_ENABLED = ["home", "leave", "attendance", "approvals", "holidays"];
 
 const od = (day: string, status: DayStatusKey, extra: Partial<DayRow> = {}): DayRow => ({
   day, status, is_wfh: false, is_late: false, worked_minutes: null, missing_checkout: false,
@@ -148,3 +148,26 @@ export const decidedItems = [
   { id: "d1", text: "KCF0011 Dinesh Prabhu · CL 8 Oct", outcome: "approved", comment: "Approved" },
   { id: "d2", text: "KCF0014 Meena Fal · WFH 2 Oct", outcome: "rejected", comment: "Client visit that day" },
 ];
+
+// Holiday calendar (S11) sample data. The real list is imported by HR from the official Goa notification.
+export type HolidayType = "national" | "state" | "optional";
+export type HolidayRow = { id: string; site: "ho" | "plant"; date: string; name: string; type: HolidayType; onWeeklyOff: boolean };
+export const holidaySites = [
+  { key: "ho" as const, name: "Panaji Head Office", week: "5-day week, Saturday and Sunday off" },
+  { key: "plant" as const, name: "Verna Plant", week: "6-day week, Sunday off" },
+];
+export const holidayRows: HolidayRow[] = [
+  { id: "h1", site: "ho", date: "2026-10-02", name: "Gandhi Jayanti", type: "national", onWeeklyOff: false },
+  { id: "h2", site: "ho", date: "2026-10-20", name: "Optional One", type: "optional", onWeeklyOff: false },
+  { id: "h3", site: "ho", date: "2026-11-04", name: "Optional Two", type: "optional", onWeeklyOff: false },
+  { id: "h4", site: "ho", date: "2026-11-05", name: "Optional Three", type: "optional", onWeeklyOff: false },
+  { id: "h5", site: "ho", date: "2026-12-19", name: "Goa Liberation Day", type: "state", onWeeklyOff: true },
+  { id: "h6", site: "ho", date: "2026-12-25", name: "Christmas", type: "state", onWeeklyOff: false },
+  { id: "v1", site: "plant", date: "2026-10-02", name: "Gandhi Jayanti", type: "national", onWeeklyOff: false },
+  { id: "v2", site: "plant", date: "2026-11-09", name: "Verna Fest", type: "state", onWeeklyOff: false },
+  { id: "v3", site: "plant", date: "2026-11-12", name: "Verna Optional", type: "optional", onWeeklyOff: false },
+  { id: "v4", site: "plant", date: "2026-12-19", name: "Goa Liberation Day", type: "state", onWeeklyOff: false },
+  { id: "v5", site: "plant", date: "2026-12-25", name: "Christmas", type: "state", onWeeklyOff: false },
+];
+// The signed-in employee works at Panaji: Optional One is already approved (matches the attendance sample).
+export const holidayRequestStart: Record<string, "pending" | "approved"> = { h2: "approved" };
