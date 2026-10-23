@@ -1,26 +1,57 @@
 @import "tailwindcss";
 
+/* Design tokens from DESIGN.md section 2 (light theme only for v1). Contrast ratios are listed there. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f8fafc;
+  --surface: #ffffff;
+  --text: #0f172a;
+  --muted: #475569;
+  --border: #cbd5e1;
+  --input: #64748b;
+  --primary: #0f766e;
+  --primary-dark: #115e59;
+  --danger: #b91c1c;
+  --warning: #b45309;
+  --success: #15803d;
+  --info: #1d4ed8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-danger: var(--danger);
+  --color-warning: var(--warning);
+  --color-success: var(--success);
+  --color-info: var(--info);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Status colours: identical on every screen (DESIGN.md 2.3). */
+  --color-st-present-bg: #dcfce7;  --color-st-present: #166534;
+  --color-st-half-bg: #fef3c7;     --color-st-half: #92400e;
+  --color-st-absent-bg: #fee2e2;   --color-st-absent: #991b1b;
+  --color-st-leave-bg: #dbeafe;    --color-st-leave: #1e40af;
+  --color-st-holiday-bg: #ede9fe;  --color-st-holiday: #5b21b6;
+  --color-st-off-bg: #e5e7eb;      --color-st-off: #374151;
+  --color-st-late-bg: #ffedd5;     --color-st-late: #9a3412;
+
+  --font-sans: var(--font-inter), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), system-ui, sans-serif;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Visible keyboard focus everywhere (>= 3:1 against white). */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
 }
