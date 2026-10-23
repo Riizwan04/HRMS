@@ -3,7 +3,7 @@
 Employee Master, Attendance and Leave, plus an HR assistant, for Konkan Coastal Foods (Panaji head office, Verna plant).
 Built for the *HRMS Build* assignment (AI Applications in HR).
 
-**Live demo:** https://hrms-ten-flame.vercel.app · **Status: work in progress (milestone 1 of 2 delivered, see below)**
+**Live demo:** https://hrms-xqz4.vercel.app (sign in with your email; Clerk emails a one-time code) · **Status: work in progress (milestone 1 of 2 delivered, see below)**
 
 ## What works today
 
