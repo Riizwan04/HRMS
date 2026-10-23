@@ -47,7 +47,7 @@ export function cellStyle(status: DayStatusKey): { cls: string; code: string; la
     case "weekly_off": return { cls: "bg-st-off-bg text-st-off", code: "WO", label: "Weekly Off" };
     case "in_progress": return { cls: "bg-surface text-text outline outline-2 -outline-offset-2 outline-primary", code: "•", label: "Today, in progress" };
     case "pending": return { cls: "bg-surface text-muted outline outline-2 -outline-offset-2 outline-primary", code: "", label: "Today, not checked in" };
-    case "not_employed": return { cls: "bg-[repeating-linear-gradient(135deg,#e5e7eb_0_4px,#f8fafc_4px_8px)] text-muted", code: "", label: "Not employed" };
+    case "not_employed": return { cls: "bg-[repeating-linear-gradient(135deg,#24457a_0_4px,#112547_4px_8px)] text-muted", code: "", label: "Not employed" };
     default: return { cls: "bg-surface text-muted", code: "", label: "" };
   }
 }

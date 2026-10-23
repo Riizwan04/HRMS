@@ -5,7 +5,7 @@ import { formatDateTimeIST } from "@/lib/time/ist";
 import { approvalItems, decidedItems, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { ApprovalsView } from "./approvals-view";
 
-export const metadata = { title: "Approvals (preview) · Kinara" };
+export const metadata = { title: "Approvals · Kinara" };
 
 // ?state=empty and ?state=loading show the designed states; ?role=employee shows what a non-approver gets.
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {

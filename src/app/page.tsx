@@ -1,63 +1,85 @@
-import { CheckCircle2, CircleDashed, ExternalLink } from "lucide-react";
-import Image from "next/image";
 import Link from "next/link";
+import { BalanceCard } from "@/components/balance-card";
+import { AppShell } from "@/components/app-shell";
+import { Button, LinkButton } from "@/components/ui/button";
+import { Card, CardBody, CardHeader } from "@/components/ui/card";
+import { formatDateTimeIST, formatTimeIST } from "@/lib/time/ist";
+import { PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
+import { CheckInCard } from "./check-in-card";
 
-export const metadata = { title: "Kinara · Konkan Coastal Foods HRMS" };
+export const metadata = { title: "Dashboard · Kinara" };
 
-const WORKING = [
-  { href: "/preview/dashboard", title: "Home dashboard", note: "Check in and see leave balances at a glance. Employee, Manager and HR Admin views." },
-  { href: "/preview/leave/apply", title: "Apply for leave", note: "Live working-days calculator: weekends and holidays skipped, balance after, convert to Loss of Pay, certificate rule." },
-  { href: "/preview/leave", title: "My leave", note: "Balances with full breakdown, request history, confirmed cancel." },
-  { href: "/preview/attendance", title: "My attendance", note: "Colour-coded month calendar, Late marks, regularisation and WFH requests." },
-  { href: "/preview/approvals", title: "Approvals inbox", note: "Leave, regularisation, WFH and optional-holiday requests; comment rules; failure handling." },
-  { href: "/preview/holidays", title: "Holiday calendar", note: "Panaji (5-day) and Verna (6-day) calendars, optional holidays with a 2-a-year limit." },
+const ROLES: { key: Role; label: string }[] = [
+  { key: "employee", label: "Employee" }, { key: "manager", label: "Manager" }, { key: "hr", label: "HR Admin" },
 ];
-const SOON = ["Team attendance and leave calendar", "Employee directory, profile and add employee", "Reports (month-end CSV) and settings", "HR assistant (AI agent)", "Sign-in and live database connection"];
 
-export default function Home() {
+function Stat({ label, value }: { label: string; value: string | number }) {
+  return <Card className="p-4"><p className="text-sm text-muted">{label}</p><p className="mt-1 text-2xl font-semibold">{value}</p></Card>;
+}
+
+export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
+  const sp = await searchParams;
+  const role: Role = sp.role === "manager" || sp.role === "hr" ? sp.role : "employee";
+  const { team, org } = sample;
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10">
-      <header className="flex items-center gap-4">
-        <Image src="/brand/kinara-logo.svg" alt="" width={56} height={56} />
-        <div>
-          <h1 className="text-3xl font-semibold">Kinara</h1>
-          <p className="text-muted">Konkan Coastal Foods HRMS · People, simply.</p>
-        </div>
-      </header>
+    <AppShell role={role} active="home" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2 text-sm">
+        <span className="px-2 font-medium text-muted">Preview with sample data. View as:</span>
+        {ROLES.map((r) => (
+          <Link key={r.key} href={`/?role=${r.key}`}
+            className={r.key === role ? "rounded-md bg-primary px-3 py-1.5 font-semibold text-on-primary" : "rounded-md px-3 py-1.5 font-medium text-primary hover:bg-surface-2"}>
+            {r.label}
+          </Link>
+        ))}
+      </div>
 
-      <p className="rounded-lg border border-border bg-surface p-4 text-sm leading-6">
-        <strong>Project status: work in progress.</strong> The screens below are working prototypes that run on <strong>sample data</strong>;
-        sign-in and the live database connection are the next milestone. The business rules behind them (leave balances, working days,
-        attendance status, approvals, access control) are already built in the database and verified by
-        <strong> 188 automated tests</strong>, which you can run from the repository.
-      </p>
+      <h1 className="mb-4 text-2xl font-semibold">Good morning, {sample.user.name.split(" ")[0]}</h1>
 
-      <section aria-labelledby="working">
-        <h2 id="working" className="mb-3 text-lg font-semibold">Ready to try</h2>
-        <ul className="grid gap-3 sm:grid-cols-2">
-          {WORKING.map((w) => (
-            <li key={w.href}>
-              <Link href={w.href} className="flex h-full flex-col gap-1 rounded-lg border border-border bg-surface p-4 hover:border-primary">
-                <span className="flex items-center gap-2 font-semibold"><CheckCircle2 className="size-4 text-success" aria-hidden /> {w.title}</span>
-                <span className="text-sm text-muted">{w.note}</span>
-              </Link>
-            </li>
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,360px)_1fr]">
+        <CheckInCard inTime={formatTimeIST(sample.checkInIso)} />
+        <Card className="min-w-0">
+          <CardHeader title="Leave balance (2026)" action={<LinkButton href={`/leave/apply?role=${role}`} size="sm" variant="secondary">Apply for leave</LinkButton>} />
+          <CardBody className="flex gap-3 overflow-x-auto">
+            {sample.balances.map((b) => <BalanceCard key={b.code} {...b} />)}
+          </CardBody>
+        </Card>
+      </div>
+
+      <Card className="mt-4">
+        <CardHeader title="My pending requests" />
+        <CardBody className="flex flex-col divide-y divide-border p-0">
+          {sample.pending.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-3 px-4 py-3">
+              <p className="text-sm"><span className="mr-2 rounded-full border border-dashed border-input px-2 py-0.5 text-xs font-semibold">{p.kind}</span>{p.text}</p>
+              <Button size="sm" variant="ghost">Cancel</Button>
+            </div>
           ))}
-        </ul>
-      </section>
+        </CardBody>
+      </Card>
 
-      <section aria-labelledby="soon">
-        <h2 id="soon" className="mb-3 text-lg font-semibold">Coming next</h2>
-        <ul className="flex flex-col gap-2 text-sm text-muted">
-          {SOON.map((s) => <li key={s} className="flex items-center gap-2"><CircleDashed className="size-4" aria-hidden /> {s}</li>)}
-        </ul>
-      </section>
+      {(role === "manager" || role === "hr") && (
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <Card>
+            <CardHeader title={`Team today (${team.present + team.wfh + team.leave + team.notIn})`} />
+            <CardBody className="text-sm">Present {team.present} · WFH {team.wfh} · On leave {team.leave} · Not checked in {team.notIn}</CardBody>
+          </Card>
+          <Card>
+            <CardHeader title="Needs your decision" action={<LinkButton href={`/approvals?role=${role}`} size="sm">{team.decisions} pending</LinkButton>} />
+            <CardBody className="text-sm text-muted">Leave, regularisation, WFH and optional-holiday requests from your team.</CardBody>
+          </Card>
+        </div>
+      )}
 
-      <footer className="flex flex-wrap gap-4 border-t border-border pt-4 text-sm">
-        <a className="inline-flex items-center gap-1 text-primary underline" href="https://github.com/Riizwan04/HRMS" target="_blank" rel="noreferrer">
-          Source code and documents on GitHub <ExternalLink className="size-3.5" aria-hidden />
-        </a>
-      </footer>
-    </main>
+      {role === "hr" && (
+        <div className="mt-4 grid grid-cols-2 gap-4 md:grid-cols-5">
+          <Stat label="Active employees" value={org.active} />
+          <Stat label="On leave today" value={org.onLeave} />
+          <Stat label="Absent (no check-in)" value={org.absent} />
+          <Stat label="Invites pending" value={org.invites} />
+          <Stat label="Missing check-outs" value={org.missingOut} />
+        </div>
+      )}
+    </AppShell>
   );
 }

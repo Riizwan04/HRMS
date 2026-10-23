@@ -3,7 +3,7 @@ import { formatDateTimeIST } from "@/lib/time/ist";
 import { leaveScenarios, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { ApplyForm } from "./apply-form";
 
-export const metadata = { title: "Apply for leave (preview) · Kinara" };
+export const metadata = { title: "Apply for leave · Kinara" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;

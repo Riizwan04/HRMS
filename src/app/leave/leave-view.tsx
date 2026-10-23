@@ -65,7 +65,7 @@ export function LeaveView({ balances, lopTaken, history, today, role }: {
         <Card><CardBody className="flex flex-col items-center gap-3 py-10 text-center">
           <Plane className="size-8 text-muted" aria-hidden />
           <p className="font-medium">{rows.length === 0 ? "You haven't applied for leave this year." : "No requests match this filter."}</p>
-          <LinkButton href={`/preview/leave/apply?role=${role}`}>Apply for leave</LinkButton>
+          <LinkButton href={`/leave/apply?role=${role}`}>Apply for leave</LinkButton>
         </CardBody></Card>
       ) : (
         <>

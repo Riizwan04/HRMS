@@ -1,6 +1,6 @@
 # DESIGN.md — Kinara (Konkan Coastal Foods HRMS)
 
-Checkpoint 2. Revision 1, 2026-10-17. Companion to `ARCHITECTURE.md` (tables, RPCs, views) and `RESEARCH.md` §10 (rule IDs). **Paper only — no UI code yet.**
+Checkpoint 2. Revision 2, 2026-10-23 (navy theme; the dashboard is the front page at `/`). Companion to `ARCHITECTURE.md` (tables, RPCs, views) and `RESEARCH.md` §10 (rule IDs). **Paper only — no UI code yet.**
 
 **Traceability convention.** Every button, input and badge below is bound to a schema column, view or RPC from `ARCHITECTURE.md` (§3 tables, §6.1 catalogue). Notation: `table.column`, `v_view.column`, `rpc_name()`. If an element has no binding it must not be built. §9 lists the gaps found while binding and how they were closed.
 
@@ -27,26 +27,31 @@ Checkpoint 2. Revision 1, 2026-10-17. Companion to `ARCHITECTURE.md` (tables, RP
 
 ## 2. Design system
 
-### 2.1 Colour tokens (light theme only for v1)
+### 2.1 Colour tokens (navy theme, owner decision 2026-10-23)
 
-Contrast ratios computed with the WCAG formula (script kept out of the repo; recompute if a token changes). Text targets: ≥ 4.5:1 normal, ≥ 3:1 large text/UI components.
+The first version used a light theme; the owner chose a modern **navy** look. Dark by design: deep navy page, lighter navy cards, teal accent.
+Status colours (2.3) are unchanged: they stay light chips with their own dark text so they read the same on every screen.
+Contrast ratios computed with the WCAG formula. Targets: >= 4.5:1 text, >= 3:1 non-text controls.
 
 | Token | Hex | Use | Contrast |
 |---|---|---|---|
-| `--primary` | `#0F766E` | Primary buttons, links, active nav, focus ring | white on it **5.47** |
-| `--primary-dark` | `#115E59` | Hover/pressed | white on it **7.58** |
-| `--bg` | `#F8FAFC` | App background | text on it **17.06** |
-| `--surface` | `#FFFFFF` | Cards, tables, dialogs | — |
-| `--text` | `#0F172A` | Body text | 17.06 on bg |
-| `--text-muted` | `#475569` | Secondary text, helper text | **7.58** on white, 7.24 on bg |
-| `--border` | `#CBD5E1` | Decorative dividers/cards (not the only cue) | 1.48 (decorative only) |
-| `--input-border` | `#64748B` | Input outlines | **4.76** vs white (≥ 3:1 required) |
-| `--danger` | `#B91C1C` | Errors, destructive | **6.47** on white; white on it 6.47 |
-| `--warning` | `#B45309` | Warnings | ≥ 4.5 on white |
-| `--success` | `#15803D` | Confirmations | ≥ 4.5 on white |
-| `--info` | `#1D4ED8` | Info banners | ≥ 4.5 on white |
+| `--bg` | `#0A1A33` | Page background (with a soft teal/blue glow) | text on it **15.18** |
+| `--sidebar` | `#071327` | Sidebar, top bar, phone tab bar | muted on it **9.44** |
+| `--surface` | `#112547` | Cards, tables, dialogs | text on it **13.30** |
+| `--surface-2` | `#17325C` | Secondary buttons, hovers | text on it **11.14** |
+| `--text` | `#EAF0FA` | Body text | see above |
+| `--text-muted` | `#A9BAD6` | Secondary text | **7.74** on surface, 8.84 on bg |
+| `--border` | `#2A4775` | Card and divider lines (decorative) | n/a |
+| `--input-border` | `#6F8DB8` | Input outlines | **4.48** vs surface (>= 3:1 required) |
+| `--primary` | `#2DD4BF` | Primary buttons, links, active nav, focus ring | **8.18** on surface, 9.97 on sidebar |
+| `--on-primary` | `#04213A` | Text on primary and danger buttons | **8.79** on primary |
+| `--primary-dark` | `#14B8A6` | Primary hover | on-primary on it **6.57** |
+| `--danger` | `#FCA5A5` | Errors, destructive | **8.02** on surface |
+| `--warning` | `#FCD34D` | Warnings | **10.56** |
+| `--success` | `#86EFAC` | Confirmations | **10.84** |
+| `--info` | `#7DD3FC` | Info banners | **9.13** |
 
-Never use colour as the only signal: errors carry an icon + text; statuses carry a label + icon (§2.3).
+Never use colour as the only signal: errors carry an icon + text; statuses carry a label + icon (2.3). Keyboard focus ring is the teal primary (9.34 vs the page).
 
 ### 2.2 Typography, spacing, shape
 

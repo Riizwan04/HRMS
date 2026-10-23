@@ -7,10 +7,10 @@ type Variant = "primary" | "secondary" | "destructive" | "ghost";
 type Size = "sm" | "md" | "lg";
 
 const variants: Record<Variant, string> = {
-  primary: "bg-primary text-white hover:bg-primary-dark",
-  secondary: "bg-surface text-text border border-input hover:bg-bg",
-  destructive: "bg-danger text-white hover:opacity-90",
-  ghost: "text-primary hover:bg-bg",
+  primary: "bg-primary text-on-primary hover:bg-primary-dark",
+  secondary: "bg-surface-2 text-text border border-input hover:bg-border",
+  destructive: "bg-danger text-on-primary hover:opacity-90",
+  ghost: "text-primary hover:bg-surface-2",
 };
 const sizes: Record<Size, string> = {
   sm: "h-9 px-3 text-sm",

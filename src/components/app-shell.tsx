@@ -14,17 +14,17 @@ type Item = { key: string; label: string; href: string; Icon: ComponentType<{ cl
 
 // Menu per role (DESIGN.md section 3). The menu is a convenience: the server and the database enforce access.
 const ITEMS: Item[] = [
-  { key: "home", label: "Home", href: "/preview/dashboard", Icon: Home, roles: ["employee", "manager", "hr"] },
-  { key: "profile", label: "My profile", href: "/preview/profile", Icon: User, roles: ["employee", "manager", "hr"] },
-  { key: "attendance", label: "My attendance", href: "/preview/attendance", Icon: CalendarCheck, roles: ["employee", "manager", "hr"] },
-  { key: "leave", label: "My leave", href: "/preview/leave", Icon: Plane, roles: ["employee", "manager", "hr"] },
-  { key: "holidays", label: "Holidays", href: "/preview/holidays", Icon: CalendarDays, roles: ["employee", "manager", "hr"] },
-  { key: "team", label: "Team attendance", href: "/preview/team", Icon: Users, roles: ["manager", "hr"] },
-  { key: "approvals", label: "Approvals", href: "/preview/approvals", Icon: Inbox, roles: ["manager", "hr"] },
-  { key: "teamleave", label: "Leave calendar", href: "/preview/team-leave", Icon: CalendarRange, roles: ["manager", "hr"] },
-  { key: "reports", label: "Reports", href: "/preview/reports", Icon: FileText, roles: ["manager", "hr"] },
-  { key: "employees", label: "Employees", href: "/preview/employees", Icon: Building2, roles: ["hr"] },
-  { key: "settings", label: "Settings", href: "/preview/settings", Icon: Settings, roles: ["hr"] },
+  { key: "home", label: "Home", href: "/", Icon: Home, roles: ["employee", "manager", "hr"] },
+  { key: "profile", label: "My profile", href: "/profile", Icon: User, roles: ["employee", "manager", "hr"] },
+  { key: "attendance", label: "My attendance", href: "/attendance", Icon: CalendarCheck, roles: ["employee", "manager", "hr"] },
+  { key: "leave", label: "My leave", href: "/leave", Icon: Plane, roles: ["employee", "manager", "hr"] },
+  { key: "holidays", label: "Holidays", href: "/holidays", Icon: CalendarDays, roles: ["employee", "manager", "hr"] },
+  { key: "team", label: "Team attendance", href: "/team", Icon: Users, roles: ["manager", "hr"] },
+  { key: "approvals", label: "Approvals", href: "/approvals", Icon: Inbox, roles: ["manager", "hr"] },
+  { key: "teamleave", label: "Leave calendar", href: "/team-leave", Icon: CalendarRange, roles: ["manager", "hr"] },
+  { key: "reports", label: "Reports", href: "/reports", Icon: FileText, roles: ["manager", "hr"] },
+  { key: "employees", label: "Employees", href: "/employees", Icon: Building2, roles: ["hr"] },
+  { key: "settings", label: "Settings", href: "/settings", Icon: Settings, roles: ["hr"] },
 ];
 
 export function AppShell({ role, active, enabled, userName, dateLine, children }: {
@@ -35,7 +35,7 @@ export function AppShell({ role, active, enabled, userName, dateLine, children }
     enabled.includes(i.key) ? (
       <Link key={i.key} href={`${i.href}?role=${role}`} aria-current={i.key === active ? "page" : undefined}
         className={clsx("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium", extra,
-          i.key === active ? "bg-primary text-white" : "text-text hover:bg-bg")}>
+          i.key === active ? "bg-primary text-on-primary" : "text-text hover:bg-surface-2")}>
         <i.Icon className="size-5" aria-hidden /> {i.label}
       </Link>
     ) : (
@@ -50,7 +50,7 @@ export function AppShell({ role, active, enabled, userName, dateLine, children }
 
   return (
     <div className="flex min-h-screen">
-      <aside className="hidden w-64 shrink-0 flex-col gap-1 border-r border-border bg-surface p-3 lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col gap-1 border-r border-border bg-sidebar p-3 lg:flex">
         <div className="flex items-center gap-2 px-3 py-3">
           <Image src="/brand/kinara-logo.svg" alt="" width={32} height={32} />
           <span className="text-lg font-semibold">Kinara</span>
@@ -63,7 +63,7 @@ export function AppShell({ role, active, enabled, userName, dateLine, children }
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
-        <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-4 py-3">
+        <header className="flex items-center justify-between gap-3 border-b border-border bg-sidebar px-4 py-3">
           <div className="flex items-center gap-2 lg:hidden">
             <Image src="/brand/kinara-logo.svg" alt="" width={28} height={28} />
             <span className="font-semibold">Kinara</span>
@@ -79,7 +79,7 @@ export function AppShell({ role, active, enabled, userName, dateLine, children }
         <main className="min-w-0 flex-1 p-4 pb-24 lg:p-6 lg:pb-6">{children}</main>
       </div>
 
-      <nav aria-label="Main (phone)" className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-surface lg:hidden">
+      <nav aria-label="Main (phone)" className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-sidebar lg:hidden">
         {tabs.map((i) => (
           <Link key={i.key} href={`${i.href}?role=${role}`} aria-current={i.key === active ? "page" : undefined}
             className={clsx("flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium",

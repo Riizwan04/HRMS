@@ -4,7 +4,7 @@ import { formatDateTimeIST, todayIST } from "@/lib/time/ist";
 import { holidayRequestStart, holidayRows, holidaySites, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { HolidaysView } from "./holidays-view";
 
-export const metadata = { title: "Holidays (preview) · Kinara" };
+export const metadata = { title: "Holidays · Kinara" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {
   const sp = await searchParams;

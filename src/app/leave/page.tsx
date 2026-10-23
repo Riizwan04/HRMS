@@ -5,7 +5,7 @@ import { formatDateTimeIST, todayIST } from "@/lib/time/ist";
 import { leaveBalanceRows, leaveHistory, lopTaken, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { LeaveView } from "./leave-view";
 
-export const metadata = { title: "My leave (preview) · Kinara" };
+export const metadata = { title: "My leave · Kinara" };
 
 // ?state=empty and ?state=loading show the designed empty and loading states (DESIGN.md section 7).
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {
@@ -15,7 +15,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
     <AppShell role={role} active="leave" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My leave</h1>
-        <LinkButton href={`/preview/leave/apply?role=${role}`}>Apply for leave</LinkButton>
+        <LinkButton href={`/leave/apply?role=${role}`}>Apply for leave</LinkButton>
       </div>
       {sp.state === "loading" ? (
         <div aria-busy="true" aria-label="Loading leave" className="flex flex-col gap-4">

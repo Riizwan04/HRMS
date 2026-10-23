@@ -3,7 +3,7 @@ import { formatDateTimeIST, todayIST } from "@/lib/time/ist";
 import { attendanceMonth, attendanceSummary, PREVIEW_ENABLED, sample, sampleRequests, type Role } from "@/lib/preview-data";
 import { AttendanceView } from "./attendance-view";
 
-export const metadata = { title: "My attendance (preview) · Kinara" };
+export const metadata = { title: "My attendance · Kinara" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;

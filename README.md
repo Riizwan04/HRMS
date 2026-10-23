@@ -71,6 +71,6 @@ RESEARCH.md  ARCHITECTURE.md  DESIGN.md  CLAUDE.md   design documents (rules hav
 db/migrations   the database: tables, rules, actions, security
 db/tests        pgTAP tests citing the rule IDs
 src/lib/time    IST helpers (the only code allowed to touch clocks)
-src/app/preview prototype screens on sample data
+src/app         the screens (prototype, on sample data); /about = project status
 docs/           screenshots, test report, logo
 ```

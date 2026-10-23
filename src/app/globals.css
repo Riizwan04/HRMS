@@ -1,30 +1,37 @@
 @import "tailwindcss";
 
-/* Design tokens from DESIGN.md section 2 (light theme only for v1). Contrast ratios are listed there. */
+/* Navy theme (DESIGN.md section 2.1). All text pairs verified >= 4.5:1; the status colours keep their own light chips. */
 :root {
-  --bg: #f8fafc;
-  --surface: #ffffff;
-  --text: #0f172a;
-  --muted: #475569;
-  --border: #cbd5e1;
-  --input: #64748b;
-  --primary: #0f766e;
-  --primary-dark: #115e59;
-  --danger: #b91c1c;
-  --warning: #b45309;
-  --success: #15803d;
-  --info: #1d4ed8;
+  color-scheme: dark;
+  --bg: #0a1a33;
+  --sidebar: #071327;
+  --surface: #112547;
+  --surface-2: #17325c;
+  --text: #eaf0fa;
+  --muted: #a9bad6;
+  --border: #2a4775;
+  --input: #6f8db8;
+  --primary: #2dd4bf;
+  --primary-dark: #14b8a6;
+  --on-primary: #04213a;
+  --danger: #fca5a5;
+  --warning: #fcd34d;
+  --success: #86efac;
+  --info: #7dd3fc;
 }
 
 @theme inline {
   --color-bg: var(--bg);
+  --color-sidebar: var(--sidebar);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
+  --color-on-primary: var(--on-primary);
   --color-danger: var(--danger);
   --color-warning: var(--warning);
   --color-success: var(--success);
@@ -43,7 +50,8 @@
 }
 
 body {
-  background: var(--bg);
+  background: radial-gradient(1100px 520px at 85% -8%, rgba(45, 212, 191, 0.10), transparent), radial-gradient(900px 500px at -5% 105%, rgba(56, 120, 255, 0.12), transparent), var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-inter), system-ui, sans-serif;
   font-size: 16px;
