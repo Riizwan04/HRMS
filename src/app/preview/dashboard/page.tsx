@@ -65,7 +65,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
             <CardBody className="text-sm">Present {team.present} · WFH {team.wfh} · On leave {team.leave} · Not checked in {team.notIn}</CardBody>
           </Card>
           <Card>
-            <CardHeader title="Needs your decision" action={<Button size="sm">{team.decisions} pending</Button>} />
+            <CardHeader title="Needs your decision" action={<LinkButton href={`/preview/approvals?role=${role}`} size="sm">{team.decisions} pending</LinkButton>} />
             <CardBody className="text-sm text-muted">Leave, regularisation, WFH and optional-holiday requests from your team.</CardBody>
           </Card>
         </div>
