@@ -100,3 +100,25 @@ export const sampleRequests = [
   { id: "r1", kind: "Regularisation", text: "Wed 14 Oct · 9:55 am to 6:00 pm", status: "Pending" },
   { id: "r2", kind: "WFH", text: "Mon 19 Oct", status: "Pending" },
 ];
+
+// My leave (S7) sample data, shaped like leave_balances() and the leave_requests table.
+export const leaveBalanceRows = [
+  { code: "CL", name: "Casual Leave", opening: 0, accrued: 8, adjusted: 0, used: 0, pending: 2, available: 8 },
+  { code: "SL", name: "Sick Leave", opening: 0, accrued: 7, adjusted: 0, used: 0, pending: 0, available: 7 },
+  { code: "EL", name: "Earned Leave", opening: 13.75, accrued: 11.25, adjusted: 0, used: 0, pending: 0, available: 25 },
+];
+export const lopTaken = 1;
+
+export type LeaveHistoryRow = {
+  id: string; type: string; from: string; to: string; days: number; lopDays: number;
+  status: "pending" | "approved" | "rejected" | "cancelled"; comment: string | null; decidedBy: string | null; attachment: boolean;
+};
+export const leaveHistory: LeaveHistoryRow[] = [
+  { id: "l1", type: "CL", from: "2026-10-22", to: "2026-10-23", days: 2, lopDays: 0, status: "pending", comment: null, decidedBy: null, attachment: false },
+  { id: "l2", type: "EL", from: "2026-12-07", to: "2026-12-09", days: 3, lopDays: 0, status: "approved", comment: "Enjoy the break", decidedBy: "Mohan Manager", attachment: false },
+  { id: "l3", type: "CL", from: "2026-09-03", to: "2026-09-04", days: 2, lopDays: 0, status: "approved", comment: "Approved", decidedBy: "Mohan Manager", attachment: false },
+  { id: "l4", type: "SL", from: "2026-08-18", to: "2026-08-20", days: 3, lopDays: 0, status: "approved", comment: null, decidedBy: "Mohan Manager", attachment: true },
+  { id: "l5", type: "CL", from: "2026-07-10", to: "2026-07-10", days: 1, lopDays: 0, status: "rejected", comment: "Team is short-staffed that day", decidedBy: "Mohan Manager", attachment: false },
+  { id: "l6", type: "LOP", from: "2026-06-12", to: "2026-06-12", days: 1, lopDays: 1, status: "approved", comment: null, decidedBy: "Mohan Manager", attachment: false },
+  { id: "l7", type: "CL", from: "2026-06-01", to: "2026-06-01", days: 1, lopDays: 0, status: "cancelled", comment: null, decidedBy: null, attachment: false },
+];

@@ -150,3 +150,11 @@ export function formatDateTimeIST(instant: Date | string | number): string {
   const date = toISTDate(instant);
   return `${formatDayShort(date)} ${date.slice(0, 4)}, ${formatTimeIST(instant)} IST`;
 }
+
+/** "10 Jul 2026", "22-23 Oct 2026" or "28 Dec 2026 - 2 Jan 2027" */
+export function formatRange(from: DateStr, to: DateStr): string {
+  if (from === to) return formatDate(from);
+  const a = utcOf(from), b = utcOf(to);
+  if (from.slice(0, 7) === to.slice(0, 7)) return `${a.getUTCDate()}\u2013${b.getUTCDate()} ${MONTHS[b.getUTCMonth()]} ${b.getUTCFullYear()}`;
+  return `${formatDate(from)} \u2013 ${formatDate(to)}`;
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays, addMonths, daysOfMonth, diffDays, formatDate, formatDateTimeIST, formatMonth, formatTimeIST,
-  isoWeekday, istInstant, istTimeOfDay, isValidDate, monthEnd, monthStart, todayIST, toISTDate, weekdayShort,
+  formatRange, isoWeekday, istInstant, istTimeOfDay, isValidDate, monthEnd, monthStart, todayIST, toISTDate, weekdayShort,
 } from "./ist";
 
 // These run under several process time zones (npm test); IST results must never depend on them.
@@ -87,5 +87,13 @@ describe("display formats (always IST)", () => {
     expect(formatTimeIST("2026-10-16T12:30:00Z")).toBe("6:00 pm");
     expect(formatTimeIST("2026-10-16T18:30:00Z")).toBe("12:00 am");
     expect(formatDateTimeIST("2026-10-16T04:52:00Z")).toBe("Fri 16 Oct 2026, 10:22 am IST");
+  });
+});
+
+describe("formatRange", () => {
+  it("collapses same-day and same-month ranges", () => {
+    expect(formatRange("2026-07-10", "2026-07-10")).toBe("10 Jul 2026");
+    expect(formatRange("2026-10-22", "2026-10-23")).toBe("22\u201323 Oct 2026");
+    expect(formatRange("2026-12-28", "2027-01-02")).toBe("28 Dec 2026 \u2013 2 Jan 2027");
   });
 });
