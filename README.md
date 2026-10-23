@@ -48,6 +48,12 @@ Screenshots: [`docs/screenshots`](docs/screenshots). Latest test run: [`docs/tes
 
 Not yet done, and shown as "soon" in the app: team attendance, leave calendar, employee directory and profile, add employee, reports (CSV), settings, the HR assistant, sign-in, the seed script with test logins.
 
+## Sign-in
+
+Sign-in uses Clerk. It switches on automatically when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` are set (Vercel environment variables
+or `.env.local`): every page then requires login and the dashboard opens after it. Without the keys the app runs in demo mode and opens straight to the dashboard.
+`/about` (project status) is always public.
+
 ## Run it
 
 ```bash

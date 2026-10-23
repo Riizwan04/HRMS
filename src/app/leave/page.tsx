@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { LinkButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { displayName } from "@/lib/session";
 import { formatDateTimeIST, todayIST } from "@/lib/time/ist";
 import { leaveBalanceRows, leaveHistory, lopTaken, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { LeaveView } from "./leave-view";
@@ -10,9 +11,10 @@ export const metadata = { title: "My leave · Kinara" };
 // ?state=empty and ?state=loading show the designed empty and loading states (DESIGN.md section 7).
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {
   const sp = await searchParams;
+  const name = await displayName();
   const role: Role = sp.role === "manager" || sp.role === "hr" ? sp.role : "employee";
   return (
-    <AppShell role={role} active="leave" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell role={role} active="leave" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My leave</h1>
         <LinkButton href={`/leave/apply?role=${role}`}>Apply for leave</LinkButton>

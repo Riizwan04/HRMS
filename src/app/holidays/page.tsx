@@ -1,5 +1,6 @@
 import { AppShell } from "@/components/app-shell";
 import { Skeleton } from "@/components/ui/skeleton";
+import { displayName } from "@/lib/session";
 import { formatDateTimeIST, todayIST } from "@/lib/time/ist";
 import { holidayRequestStart, holidayRows, holidaySites, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { HolidaysView } from "./holidays-view";
@@ -8,9 +9,10 @@ export const metadata = { title: "Holidays · Kinara" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {
   const sp = await searchParams;
+  const name = await displayName();
   const role: Role = sp.role === "manager" || sp.role === "hr" ? sp.role : "employee";
   return (
-    <AppShell role={role} active="holidays" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell role={role} active="holidays" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <h1 className="mb-1 text-2xl font-semibold">Holidays 2026</h1>
       <p className="mb-4 text-sm text-muted">Preview with sample dates. HR imports the real list from the official Goa notification.</p>
       {sp.state === "loading" ? (

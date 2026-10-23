@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/app-shell";
+import { displayName } from "@/lib/session";
 import { formatDateTimeIST } from "@/lib/time/ist";
 import { leaveScenarios, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { ApplyForm } from "./apply-form";
@@ -7,9 +8,10 @@ export const metadata = { title: "Apply for leave · Kinara" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;
+  const name = await displayName();
   const role: Role = sp.role === "manager" || sp.role === "hr" ? sp.role : "employee";
   return (
-    <AppShell role={role} active="leave" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell role={role} active="leave" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <h1 className="mb-4 text-2xl font-semibold">Apply for leave</h1>
       <ApplyForm scenarios={leaveScenarios} manager="Mohan Manager" />
     </AppShell>

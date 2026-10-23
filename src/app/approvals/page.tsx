@@ -1,6 +1,7 @@
 import { AppShell } from "@/components/app-shell";
 import { Card, CardBody } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { displayName } from "@/lib/session";
 import { formatDateTimeIST } from "@/lib/time/ist";
 import { approvalItems, decidedItems, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { ApprovalsView } from "./approvals-view";
@@ -10,9 +11,10 @@ export const metadata = { title: "Approvals · Kinara" };
 // ?state=empty and ?state=loading show the designed states; ?role=employee shows what a non-approver gets.
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {
   const sp = await searchParams;
+  const name = await displayName();
   const role: Role = sp.role === "employee" ? "employee" : sp.role === "hr" ? "hr" : "manager";
   return (
-    <AppShell role={role} active="approvals" enabled={PREVIEW_ENABLED} userName={sample.user.name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell role={role} active="approvals" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
       <h1 className="mb-4 text-2xl font-semibold">Approvals</h1>
       {role === "employee" ? (
         <Card><CardBody className="py-10 text-center"><p className="font-medium">You don&apos;t have access to this page</p>

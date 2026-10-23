@@ -5,11 +5,13 @@ import {
   Building2, CalendarCheck, CalendarDays, CalendarRange, FileText, Home, Inbox, MessageCircle, MoreHorizontal,
   Plane, Settings, User, Users,
 } from "lucide-react";
+import { UserButton } from "@clerk/nextjs";
 import Image from "next/image";
 import Link from "next/link";
 import type { ComponentType, ReactNode } from "react";
 
 type Role = "employee" | "manager" | "hr";
+const clerkOn = Boolean(process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY);
 type Item = { key: string; label: string; href: string; Icon: ComponentType<{ className?: string }>; roles: Role[] };
 
 // Menu per role (DESIGN.md section 3). The menu is a convenience: the server and the database enforce access.
@@ -74,6 +76,7 @@ export function AppShell({ role, active, enabled, userName, dateLine, children }
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-input px-3 text-sm font-semibold text-primary opacity-70">
             <MessageCircle className="size-4" aria-hidden /> Ask HR
           </button>
+          {clerkOn && <UserButton />}
         </header>
         <p className="px-4 pt-2 text-xs text-muted sm:hidden">{dateLine}</p>
         <main className="min-w-0 flex-1 p-4 pb-24 lg:p-6 lg:pb-6">{children}</main>
