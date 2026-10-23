@@ -30,15 +30,16 @@ Screens, flows and the design system are in `DESIGN.md`; every UI element there 
 |---|---|---|---|
 | Framework | **Next.js (App Router) + TypeScript** | Server Components / Server Actions give a natural *server* place for role checks; one codebase for UI and API; first-class Vercel support; Vercel AI SDK is built for it | **SvelteKit/Remix**: equally capable but smaller ecosystem for the AI SDK + Clerk components; no gain for this scope |
 | Hosting | **Vercel (Hobby)** | Free, zero-config deploy, preview URLs, env-var management. Hobby is non-commercial — fine for coursework | **Render/Railway free**: cold starts and sleeping dynos make a live demo flaky |
-| Database | **Supabase Postgres** | Relational constraints (unique, FK, CHECK), **row-level security**, SQL functions/triggers for atomic rules, free tier | **Firebase/Firestore**: no relational constraints or joins; unique-per-day, no-cycle and balance rules would live only in app code; security rules are weaker for column-level privacy |
-| Auth | **Clerk** (authentication only) | Brief default; hosted sign-in, mandatory email verification (sign-up is open; access is gated by our `employees` table, §5.1); Supabase accepts Clerk session tokens for RLS (third-party auth integration) | **Supabase Auth**: simpler with RLS (one less moving part) and honestly a strong alternative. Rejected because the brief's default is Clerk and its pre-built UI/invitations save time; the cost is the integration setup, tracked as risk R4. **Roles are never read from Clerk** — they are in our `employees` table. |
+| Database | **Neon Postgres** (free plan) | Plain Postgres: relational constraints (unique, FK, CHECK), **row-level security**, SQL functions/triggers for atomic rules; supports `pgtap`, `pgcrypto`, `citext`; compute auto-suspends when idle and wakes by itself (no multi-day pause); its HTTP driver works over HTTPS only | **Supabase**: the original choice, dropped because the owner's two free projects are already in use. **Firebase/Firestore**: no relational constraints or joins; unique-per-day, no-cycle and balance rules would live only in app code; weaker column-level privacy |
+| File storage | **Vercel Blob** (private store, Hobby plan) | Neon has no file storage; certificates are small and the Hobby allowance (≈1 GB; verify) is enough; accessed only through the server | **Neon/Postgres `bytea`**: bloats the 0.5–1 GB free DB and backups |
+| Auth | **Clerk** (authentication only) | Brief default; hosted sign-in, mandatory email verification (sign-up is open; access is gated by our `employees` table, §5.1); the server verifies the Clerk session and hands the verified user id to Postgres as a session claim for RLS (§5.1) | **Supabase Auth / Auth.js**: simpler to wire to RLS or fully self-hosted. Rejected because the brief's default is Clerk and its pre-built sign-in UI and verification flows save time; the cost is the claim-passing wiring, tracked as risk R4. **Roles are never read from Clerk** — they are in our `employees` table. |
 | Email | **Resend** (free tier) | One HTTP call from a server action; API key only on the server | **Gmail SMTP via Nodemailer**: needs an app password for a personal account (secret hygiene, daily caps, spam-filtered). *Caveat:* Resend's free sandbox sender delivers only to the account owner until a domain is verified — see R5. |
 | AI model API | **Google Gemini (Flash-class) via Vercel AI SDK**; **Groq (Llama 3.3-class, tool-calling) as fallback** | Free tiers; both support tool calling through the AI SDK; Gemini is strong on Hinglish. Model ID is an env var (`AGENT_MODEL`), so switching is configuration | **Paid OpenAI/Anthropic API**: violates "free tiers only" |
 | AI library | **Vercel AI SDK** (`ai` + `@ai-sdk/google` / `@ai-sdk/groq`) | Typed tools (zod), streaming, multi-step tool loop, provider swap | **LangChain**: heavier, abstracts away the tool boundary we must keep tight |
 | Validation | **zod** (TS) mirrored by DB `CHECK`s | UI-friendly messages in TS; DB is the final authority | TS-only validation: bypassable by any non-UI caller (including the agent) |
-| Tests | **Vitest** (units), **pgTAP** via `supabase test db` (SQL rules + RLS), **Playwright** (checklist E2E, run with other time zones) | Matches the three places rules live | Manual only: not repeatable |
+| Tests | **Vitest** (units), **pgTAP** (SQL rules + RLS) run by a small Node runner (`scripts/run-pgtap.ts`; `pg_prove` needs raw TCP, we only have HTTPS/WebSocket), **Playwright** (checklist E2E, run with other time zones) | Matches the three places rules live | Manual only: not repeatable |
 
-Free-tier facts to re-check on build day (they change): Supabase free projects **pause after ~1 week of inactivity** (R6), Resend sender restriction, Clerk MAU cap, Gemini/Groq limits (§7.6).
+Free-tier facts to re-check on build day (they change): Neon storage (sources say 0.5 GB or 1 GB per project) and compute hours (≈100 CU-hours/month; hitting the cap suspends compute — R6), Vercel Blob allowance, Resend sender restriction, Clerk MAU cap, Gemini/Groq limits (§7.6).
 
 ---
 
@@ -56,9 +57,9 @@ flowchart LR
     EM[Email sender<br/>reads email_outbox]
   end
   C[(Clerk<br/>identity + JWT)]
-  subgraph S[Supabase]
-    PG[("Postgres<br/>⑥ RLS on every table<br/>⑥ SECURITY DEFINER RPCs re-check role<br/>business rules: functions, views, triggers")]
-    ST[(Storage<br/>medical certificates<br/>private bucket, ⑥ policies)]
+  subgraph S[Neon + Vercel Blob]
+    PG[("Neon Postgres<br/>⑥ RLS on every table<br/>⑥ SECURITY DEFINER RPCs re-check role<br/>business rules: functions, views, triggers")]
+    ST[(Vercel Blob private store<br/>medical certificates<br/>only reachable via server, ⑥ row check first)]
   end
   LLM[LLM API<br/>Gemini / Groq]
   R[Resend email API]
@@ -66,8 +67,8 @@ flowchart LR
   B -- "HTTPS + session" --> MW --> SA
   B -- "chat" --> AG
   MW -. "verify session" .-> C
-  SA -- "user-scoped client: Clerk JWT" --> PG
-  AG -- "user-scoped client: same JWT" --> PG
+  SA -- "withUser(): role authenticated +<br/>verified Clerk sub as session claim" --> PG
+  AG -- "same withUser() path" --> PG
   SA --> ST
   AG -- "messages + tool schemas only<br/>NO Aadhaar/PAN/bank, NO keys" --> LLM
   LLM -- "tool-call requests" --> AG
@@ -78,9 +79,11 @@ flowchart LR
 
 Key properties:
 - **Two independent gates after authentication:** the Next.js server (②③) *and* Postgres (⑥). Bypassing the UI, or a bug in a server action, still hits RLS/RPC checks.
-- The app uses a **user-scoped Supabase client** (the user's Clerk token), never the service-role key, for every user-initiated request including every agent tool call. The **service-role key exists in exactly three places** (server-only module `lib/supabase/admin.ts`): the seed script, first-login Clerk↔employee linking, and the email-outbox sender. It is forbidden in agent/tool code (lint rule + import test).
+- Every user-initiated request, including every agent tool call, goes through **one function, `withUser(verifiedClaims, queries)`** (`src/lib/db/client.ts`). It sends a single atomic batch over Neon's HTTP driver: `SET LOCAL ROLE authenticated`, `set_config('request.jwt.claims', {sub, role}, true)`, then the queries. The claim comes from the **server-verified Clerk session**, never from the browser. The runtime connects as a limited login role `app_runtime` that owns nothing and has no table privileges of its own, so any query run outside `withUser` fails.
+- **There is no service key.** The only privileged work (first-login Clerk↔employee linking, the email-outbox worker) is done by a few narrow `SECURITY DEFINER` functions that only `app_runtime` may execute. The **owner/admin connection string exists only for migrations and the seed script**, in `scripts/` on a developer machine or this session — it is never set in Vercel's runtime environment (import-restriction lint rule + test).
+- *Honest residual:* the app server is trusted to supply the verified `sub`; a compromised server could impersonate any user (as it could with a Supabase service key). Clerk-verified sessions, minimal role privileges and server-side checks reduce but do not remove this.
 - The LLM receives only: system prompt, the user's messages, tool schemas and **allow-listed tool outputs**.
-- **The browser never talks to Supabase.** No `NEXT_PUBLIC_SUPABASE_*` variables; the Supabase URL and keys exist only on the server. Every DB call goes through a server action/route handler (②③), then RLS (⑥). This removes the "anyone can call PostgREST with the public key" attack surface entirely; RLS remains as the second gate.
+- **The browser never talks to the database or to Blob storage.** No `NEXT_PUBLIC_` variables for either; there is no public data API (Neon's Data API is not enabled). Every DB call goes through a server action/route handler (②③), then RLS (⑥). RLS remains the second gate.
 - **No RPC accepts an `actor_id`.** The acting employee is always derived from the JWT inside the function (`current_employee_id()`).
 
 ---
@@ -239,7 +242,7 @@ PK = primary key, FK = foreign key (all `ON DELETE RESTRICT`), UQ = unique, CK =
 2. After Clerk sign-in, `requireEmployee()` finds the `employees` row with `clerk_user_id = sub`. On the **first** login only, if none is linked, the server looks up an `employees` row by the **verified** Clerk email and *links* `clerk_user_id` (service-role, narrow function, only when the row's `clerk_user_id IS NULL`). No match → "access denied / ask HR".
 3. Role is **read from the database**, per request: `is_hr_admin` flag; **manager** = `EXISTS (active employee with reporting_manager_id = me)`; everyone is an employee. There is no role claim in Clerk and no `role` column besides `is_hr_admin` (brief p.5).
 4. **Deactivation:** `requireEmployee()` also rejects `status='inactive'` or `today(IST) > last_working_day` → redirect to `/access-denied`. This runs on every request, so it works even if the Clerk session is still valid (and we additionally ban the Clerk user after the last day as belt-and-braces).
-5. The same identity reaches Postgres: the user-scoped client sends the Clerk token; SQL helpers read `auth.jwt()->>'sub'`.
+5. The same identity reaches Postgres: `withUser()` sets `request.jwt.claims` for the transaction from the verified Clerk session; SQL helpers read it via `private.auth_sub()` (= `current_setting('request.jwt.claims', true)::jsonb ->> 'sub'`). Unlinked or missing claims return no rows.
 
 ### 5.2 SQL helper functions (all `SECURITY DEFINER`, `STABLE`, fixed `search_path`; these avoid RLS recursion)
 
@@ -264,17 +267,17 @@ RLS is **enabled on every table**; `anon` has no access; `authenticated` has onl
 | `leave_adjustments`, `leave_opening_balances` | self (read only); HR | HR only |
 | `v_leave_balance` | self; manager for direct reports *(balance shown in the approval inbox)*; HR | n/a (view) |
 | `audit_log` | HR admin | inserts only by triggers/RPCs; no UPDATE/DELETE |
-| `email_outbox` | none (server job only) | service-role |
+| `email_outbox` | none (server job only) | only through narrow `SECURITY DEFINER` functions granted to `app_runtime` |
 | `agent_drafts` | owner | owner via tool-layer RPC; confirm via action |
 | `agent_log` | own rows; HR all | insert-only for user |
 
-**Execution privileges (a known Supabase pitfall).** Postgres grants `EXECUTE` on new functions to `PUBLIC` by default. Every migration that creates a function or view must `REVOKE ALL … FROM PUBLIC, anon` and `GRANT … TO authenticated` explicitly; RLS helper functions live in a non-exposed `private` schema. A pgTAP test enumerates every function/view in `public` and fails if `anon` or `PUBLIC` can execute/select it. `SECURITY DEFINER` views and functions always filter by `current_employee_id()` / `is_hr_admin()` internally, because they run with owner rights and bypass RLS.
+**Execution privileges.** Postgres grants `EXECUTE` on new functions to `PUBLIC` by default. Every migration that creates a function or view must `REVOKE ALL … FROM PUBLIC` and `GRANT … TO authenticated` (or `app_runtime` for the few system functions) explicitly; no `anon` role is created; RLS helper functions live in a non-exposed `private` schema. A pgTAP test enumerates every function/view in `public` and fails if `PUBLIC` or `app_runtime` can execute/select anything that is not on an explicit allow-list. `SECURITY DEFINER` views and functions always filter by `current_employee_id()` / `is_hr_admin()` internally, because they run with owner rights and bypass RLS.
 
 **Object-level checks (the URL-tampering test).** Every route that takes an id (`/employees/[id]`, `/leave/[id]`) loads via the user-scoped client — an id the user may not see returns *zero rows* from RLS, and the page renders `notFound()` (same response as a non-existent id, so existence isn't leaked). The server also asserts `canViewEmployee(ctx, id)` before rendering.
 
 **Statutory/bank reveal.** HR Admin clicks Reveal → server action → `reveal_statutory(employee_id, field)` RPC (HR-only; `field` ∈ `pan`, `bank_account` — the function has no Aadhaar branch) → returns the one value and writes an `audit_log` row (`action='reveal'`, who, whom, which field, when; reason optional). **Aadhaar has no reveal path anywhere (owner decision).** Revealed values are returned with `Cache-Control: no-store`, never put in a URL, CSV, log or the agent's context, and the UI re-masks after 30 s. Employees and managers never get Reveal, even for their own record.
 
-**Storage.** Medical certificates in a **private** bucket, path `{employee_id}/{request_id}/…`; storage policies: owner and their manager/HR can read; signed URLs with short expiry.
+**Storage.** Medical certificates go in a **private Vercel Blob store**, path `{employee_id}/{request_id}/…`, uploaded by a server action after `apply_leave` validates the request. There is no public URL: a download route first loads the `leave_requests` row through `withUser()` (RLS means only the owner, their manager or HR can see it) and only then streams the blob. The token (`BLOB_READ_WRITE_TOKEN`) is server-only.
 
 ---
 
@@ -361,7 +364,7 @@ Tool descriptions are written like instructions to a new colleague (when to use,
 
 | Guardrail | Enforcement (code, not prompt) |
 |---|---|
-| Acts as the signed-in user | Tool layer builds the Supabase client from the user's token; ctx from session |
+| Acts as the signed-in user | Tool layer runs every query through `withUser()` with the session's verified claims; ctx from session |
 | No sensitive data to the model | Output allow-list schemas per tool (zod `.strict()` projection); sensitive tables not reachable by any tool; a final regex scan blocks 10–12-digit and PAN-shaped strings in tool results and in the assistant's text |
 | Writes are drafts confirmed by a human | The only write tools create `agent_drafts`; **Confirm** is a server action invoked by a button click that verifies the draft's owner is the signed-in employee, its status is `draft` and it has not expired, then re-runs the full rules via the normal RPC; drafts expire in 15 min; the confirm card is rendered **from the stored payload by code**, not from model prose |
 | Agent cannot approve/reject/cancel | No such tool exists; approvals remain in the Approvals inbox |
@@ -401,7 +404,7 @@ Gemini and Groq limits changed repeatedly in 2026 and secondary sources conflict
 .
 ├── CLAUDE.md  RESEARCH.md  ARCHITECTURE.md  DESIGN.md  README.md
 ├── .env.example                      # blank values only
-├── supabase/
+├── db/                               # (was supabase/)
 │   ├── migrations/                   # the only way schema changes
 │   ├── tests/                        # pgTAP: rules + RLS per role
 │   └── seed/                         # reference data (states, leave types, policy text)
@@ -421,7 +424,8 @@ Gemini and Groq limits changed repeatedly in 2026 and secondary sources conflict
 │   │   └── agent/       {route.ts, tools/, guardrails/, prompt.ts, log.ts, drafts.ts, index.ts}
 │   ├── lib/
 │   │   ├── auth/        {require-employee.ts, require-role.ts}
-│   │   ├── supabase/    {server.ts (user-scoped), admin.ts (service-role: seed/link/email only)}
+│   │   ├── db/          {client.ts (withUser, app_runtime), admin.ts (owner connection: scripts only)}
+│   │   ├── storage/     {blob.ts (private Vercel Blob, server only)}
 │   │   ├── time/ist.ts
 │   │   ├── email/       {send.ts, templates/}
 │   │   ├── validation/  {indian-fields.ts}   # regexes mirrored from DB CHECKs
@@ -431,7 +435,7 @@ Gemini and Groq limits changed repeatedly in 2026 and secondary sources conflict
     ├── leave/  attendance/  employees/  agent/   # one folder per module; E2E in tests/e2e
 ```
 
-Rules: modules import `src/lib` and other modules' `index.ts` only; `lib/supabase/admin.ts` may be imported only from `scripts/`, the link function and the email worker (enforced by an import-restriction lint rule and a test); `src/app` contains no business logic.
+Rules: modules import `src/lib` and other modules' `index.ts` only; `lib/db/admin.ts` may be imported only from `scripts/` (enforced by an import-restriction lint rule and a test); `src/app` contains no business logic.
 
 ---
 
@@ -449,9 +453,9 @@ Rules: modules import `src/lib` and other modules' `index.ts` only; `lib/supabas
 
 | # | Risk | Mitigation |
 |---|---|---|
-| R4 | Clerk→Supabase JWT/RLS integration misconfigured (calls silently run as `anon`) | Do it in Checkpoint 3–5 before any feature; pgTAP/integration test "as Clerk user X, `current_employee_id()` = X" |
+| R4 | `withUser()` wiring wrong: queries run without the claim, as the wrong role, or non-atomically (Neon's HTTP driver has no interactive transactions, only batches) | Prove it first in Checkpoint 3: a fresh Clerk user gets `current_employee_id()` = their row, an unlinked user gets zero rows, a query outside `withUser` fails; keep every business operation a single DB function so a batch is enough; use the WebSocket `Pool` only where an interactive transaction is unavoidable |
 | R5 | Email deliverability on Resend free sandbox (only owner address) | Verify a domain if available; else seed employees with plus-addressed emails of the owner; outbox + retry; demo shows the `email_outbox` row regardless |
-| R6 | Supabase free project pauses after inactivity; free-tier AI limit hit during demo | Keep-alive request before demo; agent degrades gracefully; fallback model |
+| R6 | Neon compute auto-suspends when idle (first query after ~5 min takes about a second longer) and the free plan caps compute hours (≈100 CU-h/month; hitting it suspends compute); free-tier AI limit hit during demo | Warm the DB before the demo; watch Neon's usage page; agent degrades gracefully; fallback model |
 | R7 | Retro-active edits (weekly off/holiday/leave-rule/location changes) alter past results after payroll export | Effective-dated `location_weekly_offs`, `employee_location_history`, `leave_type_rules`; `month_exports` hash warns on re-export and blocks weekly-off changes inside exported months; config edits audited. Holidays added for past dates and `policy_settings` constants remain editable (migration + decision log) — accepted, noted for the demo |
 | R8 | Law changed (Labour Codes) | Legal refs live in `policy_documents`; RESEARCH §12 checklist |
 
@@ -500,6 +504,7 @@ Every item in the brief's testing checklist (p.19–20) becomes an automated tes
 | 2026-10-23 | **Owner authorised starting Checkpoint 3 before faculty sign-off was recorded** (faculty approval in progress). Owner accepts that later faculty changes to ARCHITECTURE/DESIGN may require rework. | Time pressure; owner's call | owner |
 | 2026-10-23 | Scaffold uses the installed Next.js 16.4 / React 19 / Tailwind 4. `middleware.ts` is named **`proxy.ts`** in this version (verified in the bundled docs). It remains an authentication-only gate ①; authorization stays in ②③⑥. Vercel/Supabase/Clerk hosts are not reachable from the Claude cloud container, so Vercel deploys from GitHub pushes and database work runs from the owner's machine or after network allow-listing | Departure from §9 file name; environment constraint | owner / draft |
 | 2026-10-23 | **Clerk sign-up mode = Open** (not invite-only), on the owner's decision. Safe only while: (1) email verification at sign-up stays ON, (2) every route/action/RPC is default-deny via `requireEmployee()` + RLS, (3) linking happens only for a verified email with `clerk_user_id IS NULL`. Test: a fresh Clerk user with no employee row gets `/access-denied` and zero rows everywhere. Revisit (switch to Invite-only) if abuse or the Clerk free-tier user cap becomes a problem | Owner preference; defence rests on our DB gate | owner |
+| 2026-10-23 | **Database changed from Supabase to Neon Postgres; certificate storage to Vercel Blob (private).** Reason: the owner's two free Supabase projects are in use and must stay live. Design consequences: no PostgREST/`auth.jwt()`; per-request `withUser()` batch sets `ROLE authenticated` + verified Clerk `sub` as `request.jwt.claims`; limited runtime role `app_runtime`; **no service key** (narrow `SECURITY DEFINER` functions instead); admin/owner connection only for migrations/seed; `supabase/` folder becomes `db/`; pgTAP via a Node runner. Neon facts verified from secondary sources: pgTAP/pgcrypto/citext supported; HTTP driver has no interactive transactions; free storage 0.5 vs 1 GB disputed. Business rules, data model and DESIGN.md are unchanged. | Resource constraint | owner |
 | *pending* | **Faculty sign-off** — record date and any required changes here. Required by the brief (p.16, p.18) **before Checkpoint 3**. | Brief: "No application code until reviewed" | faculty |
 
 ---
@@ -512,8 +517,8 @@ Performed 2026-10-17 on `ARCHITECTURE.md`, `DESIGN.md` and `RESEARCH.md` using t
 
 | # | Risk | Status |
 |---|---|---|
-| B-1 | **Supabase grants `EXECUTE` on new functions to `PUBLIC`/`anon` by default**, and views owned by the DB owner bypass RLS; an exposed RPC or view could be called straight through PostgREST. | **Fixed:** §5 *Execution privileges* (revoke from PUBLIC/anon, grant to `authenticated`, helpers in `private` schema, pgTAP enumerates every function/view) |
-| B-2 | **Browser calling Supabase directly** with a public key would make RLS the only gate and widen the surface. | **Fixed:** browser never receives Supabase URL/keys (§2); all DB access via server actions |
+| B-1 | **Postgres grants `EXECUTE` on new functions to `PUBLIC` by default**, and views owned by the DB owner bypass RLS; a forgotten grant could expose a function or view. | **Fixed:** §5 *Execution privileges* (revoke from PUBLIC, explicit grants, helpers in `private` schema, pgTAP enumerates every function/view). *(Originally written for Supabase's public API; still applies, with no public data API at all now.)* |
+| B-2 | **Browser calling the database directly** would make RLS the only gate and widen the surface. | **Fixed:** the browser never receives any DB/Blob credentials (§2); no public data API; all access via server actions |
 | B-3 | **Actor spoofing:** an RPC that accepts an employee/actor id could be called for someone else. | **Fixed:** no RPC takes `actor_id`; actor derived from JWT (§2, §6.1) |
 | B-4 | **First-login linking by email:** if HR mistypes an email, whoever owns that verified email could link to the record. | **Mitigated** (mandatory verified email — to claim a record you must control that mailbox, default-deny for unlinked accounts, links only when `clerk_user_id IS NULL`, HR sees "Invite pending"). **Accepted residual:** HR must verify addresses; no self-service relink; later email edits do not re-link |
 | B-5 | **Reveal leakage** (PAN/bank in caches, logs, URLs, CSV). | **Fixed:** `no-store`, never in URL/log/CSV/agent context, 30 s re-mask, HR-only, audit-logged, no Aadhaar branch in the RPC. **Accepted:** the revealed value is in the HR user's browser memory while shown |
@@ -555,7 +560,7 @@ Checked every element in DESIGN.md S1–S14 against §3. **Initially unbound, no
 
 ### 13.5 Residual risks carried into the build
 
-1. Clerk→Supabase JWT/RLS wiring must be proven in Checkpoint 3–5 before any feature (R4).
+1. The `withUser()` role-and-claim wiring must be proven in Checkpoint 3 before any feature (R4).
 2. Statutory figures in RESEARCH.md are still **unverified against primary texts** (RESEARCH §12).
 3. Free-tier model limits unknown until build day (§7.6).
 4. This review was done by the author; faculty review is the independent check.

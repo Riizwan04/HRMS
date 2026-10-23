@@ -498,7 +498,7 @@ Phone: same fields stacked in one column; the calculator card sits above a **sti
 | From / To | `leave_requests.from_date`, `.to_date` |
 | Half-day checkbox (shown only if `leave_type_rules.half_day_allowed` and From = To) | `leave_requests.is_half_day`; radio → `half_day_session` |
 | Reason | `leave_requests.reason` |
-| Attachment | Storage private bucket → `leave_requests.attachment_path` |
+| Attachment | private Vercel Blob (server-side upload) → `leave_requests.attachment_path` |
 | **Calculator panel** (debounced 300 ms) | `preview_leave()` → per-date breakdown from `count_working_days` (weekly off at `location_on(employee,date)`, holiday name, own approved optional holiday), total `days`, `v_leave_balance.available`/`pending`, `lop_days` |
 | **Convert excess to LOP** checkbox | submit flag → `apply_leave(convert_excess_to_lop=true)`; stores paid part on the chosen type and excess as LOP in `leave_request_days.leave_type_id` and `leave_requests.lop_days` (LR-8) |
 | Manager notice | `v_my_manager` (or "HR" if none — LR-19) |

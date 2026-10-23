@@ -29,7 +29,7 @@ If the build must depart from `ARCHITECTURE.md`, **update `ARCHITECTURE.md` and 
 
 ## Stack (details and rejected alternatives in ARCHITECTURE.md)
 
-Next.js (App Router, TypeScript) on Vercel · Supabase Postgres (RLS on) · Clerk (authentication only) · Resend (email) · Vercel AI SDK + a free-tier model (Gemini, Groq fallback) · Vitest, pgTAP, Playwright.
+Next.js (App Router, TypeScript) on Vercel · Neon Postgres (RLS on) · Vercel Blob (private files) · Clerk (authentication only) · Resend (email) · Vercel AI SDK + a free-tier model (Gemini, Groq fallback) · Vitest, pgTAP (via `scripts/run-pgtap.ts`), Playwright.
 
 ## Non-negotiable rules
 
@@ -39,7 +39,7 @@ Next.js (App Router, TypeScript) on Vercel · Supabase Postgres (RLS on) · Cler
 4. **Sensitive data**: Aadhaar, PAN and bank numbers are masked in every screen, API response, log and CSV. Aadhaar is never shown unmasked anywhere. Raw statutory/bank tables are never selected directly by the app; use the masked views/RPCs. Never send these values to the AI model, not even masked.
 5. **One implementation of each business rule**, in the database (working-day count, day status, leave balance, apply/approve/cancel). UI, CSV and agent tools call it; TypeScript must not re-implement it.
 6. **AI agent**: acts as the signed-in user, uses the same server functions and role checks, has no service key/DB credentials, every write is a draft a human confirms by button, numbers come from tools only, max 5 tool calls per question, every call logged to `agent_log`.
-7. **Four request types, one approval rule** (leave, regularisation, WFH, optional holiday): decided only by the requester's current direct manager or an HR Admin, never by the requester (RESEARCH LR-21). The acting user always comes from the JWT; no RPC takes an `actor_id`. The browser never talks to Supabase directly.
+7. **Four request types, one approval rule** (leave, regularisation, WFH, optional holiday): decided only by the requester's current direct manager or an HR Admin, never by the requester (RESEARCH LR-21). The acting user always comes from the JWT; no RPC takes an `actor_id`. The browser never talks to the database or Blob storage; every DB call goes through `withUser()` (`src/lib/db/client.ts`). There is no service key; the owner/admin connection string is for `scripts/` only and is never set in Vercel's runtime environment.
 8. **Employee code never changes** and is never reused. Employees are deactivated, never deleted.
 9. **Tests before features.** Turn each testing-checklist item (brief p.19–20) into an automated test first, then implement. Cite rule IDs in test names.
 10. Keep changes small; read every diff before committing; commit per checkpoint with a clear message and push to the designated branch.
@@ -53,7 +53,7 @@ Next.js (App Router, TypeScript) on Vercel · Supabase Postgres (RLS on) · Cler
 
 ## Folder rules (full tree in ARCHITECTURE.md §9)
 
-Code is organised **by module** under `src/modules/{employees,attendance,leave,reports,agent}`; shared code in `src/lib`. Modules may import `src/lib` and each other's public `index.ts` only — never another module's internals. Database changes only via files in `supabase/migrations`. Seed via `scripts/seed.ts`.
+Code is organised **by module** under `src/modules/{employees,attendance,leave,reports,agent}`; shared code in `src/lib`. Modules may import `src/lib` and each other's public `index.ts` only — never another module's internals. Database changes only via files in `db/migrations`. Seed via `scripts/seed.ts`.
 
 ## Commands
 
