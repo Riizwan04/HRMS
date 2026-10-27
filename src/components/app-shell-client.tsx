@@ -46,7 +46,11 @@ export function AppShellClient({ role, active, enabled, userName, dateLine, user
       </span>
     );
 
-  const tabs = ["home", "attendance", "leave"].map((k) => items.find((i) => i.key === k)!);
+  // Built screens first (Holidays last of them), unbuilt ones below, each tagged SOON.
+  const built = items.filter((i) => enabled.includes(i.key));
+  const pending = items.filter((i) => !enabled.includes(i.key));
+
+  const tabs =["home", "attendance", "leave"].map((k) => items.find((i) => i.key === k)!);
 
   return (
     <div className="flex min-h-screen">
@@ -55,7 +59,11 @@ export function AppShellClient({ role, active, enabled, userName, dateLine, user
           <Image src="/brand/kinara-logo.svg" alt="" width={32} height={32} />
           <span className="text-lg font-semibold">Kinara</span>
         </div>
-        <nav aria-label="Main" className="flex flex-col gap-1">{items.map((i) => link(i))}</nav>
+        <nav aria-label="Main" className="flex flex-col gap-1">
+          {built.map((i) => link(i))}
+          {pending.length > 0 && <p className="mt-3 px-3 text-[11px] font-semibold uppercase tracking-wide text-muted">Coming next</p>}
+          {pending.map((i) => link(i))}
+        </nav>
         <div className="mt-auto border-t border-border px-3 pt-3 text-sm">
           <p className="font-medium">{userName}</p>
           <p className="text-muted capitalize">{role === "hr" ? "HR Admin" : role}</p>
