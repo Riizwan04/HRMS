@@ -127,7 +127,7 @@ export const leaveHistory: LeaveHistoryRow[] = [
 // refusing an approval (for example the balance is no longer sufficient) so the error state can be seen.
 export type ApprovalItem =
   | { kind: "leave"; id: string; code: string; name: string; type: string; from: string; to: string; days: number; reason: string;
-      available: number; after: number; clashes: string[]; attachment: boolean; failsOnApprove?: string }
+      available: number; after: number; clashes: string[]; attachment: boolean; attachmentPath?: string | null; failsOnApprove?: string }
   | { kind: "regularisation"; id: string; code: string; name: string; workDate: string; inIso: string; outIso: string; reason: string }
   | { kind: "wfh"; id: string; code: string; name: string; workDate: string; reason: string }
   | { kind: "optional_holiday"; id: string; code: string; name: string; holiday: string; date: string; leftAfter: number };

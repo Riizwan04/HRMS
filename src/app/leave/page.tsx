@@ -2,7 +2,9 @@ import { AppShell } from "@/components/app-shell";
 import { LinkButton } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { requireEmployee } from "@/lib/auth";
-import { formatDateTimeIST, todayIST } from "@/lib/time/ist";
+import { dateLineFor } from "@/lib/page-context";
+import { todayIST } from "@/lib/time/ist";
+import { getBalances, getHistory, getLopTaken } from "@/modules/leave";
 import { leaveBalanceRows, leaveHistory, lopTaken, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { LeaveView } from "./leave-view";
 
@@ -14,8 +16,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
   const me = await requireEmployee(sp.role);
   const name = me.name;
   const role: Role = me.role;
+  const year = Number(todayIST().slice(0, 4));
+  const data = me.demo
+    ? { balances: leaveBalanceRows, lop: lopTaken, history: leaveHistory, today: todayIST(new Date(sample.nowIso)) }
+    : { balances: await getBalances(year), lop: await getLopTaken(year), history: await getHistory(year), today: todayIST() };
   return (
-    <AppShell demo={me.demo} role={role} active="leave" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
+    <AppShell demo={me.demo} role={role} active="leave" enabled={PREVIEW_ENABLED} userName={name} dateLine={dateLineFor(me.demo)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My leave</h1>
         <LinkButton href={`/leave/apply?role=${role}`}>Apply for leave</LinkButton>
@@ -26,8 +32,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
           {[0, 1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-12" />)}
         </div>
       ) : (
-        <LeaveView balances={leaveBalanceRows} lopTaken={lopTaken} history={sp.state === "empty" ? [] : leaveHistory}
-          today={todayIST(new Date(sample.nowIso))} role={role} />
+        <LeaveView balances={data.balances} lopTaken={data.lop} history={sp.state === "empty" ? [] : data.history}
+          today={data.today} role={role} live={!me.demo} />
       )}
     </AppShell>
   );

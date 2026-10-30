@@ -3,6 +3,7 @@
 import clsx from "clsx";
 import { AlertTriangle, CalendarClock, FileCheck2, Home, Inbox, PartyPopper, Plane } from "lucide-react";
 import { useState } from "react";
+import { decideRequest } from "@/modules/approvals/actions";
 import { RequestStatusBadge } from "@/components/request-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -27,7 +28,10 @@ function Details({ it }: { it: ApprovalItem }) {
         {it.clashes.length > 0 && (
           <p className="flex items-center gap-1.5 text-warning"><AlertTriangle className="size-4" aria-hidden /> {it.clashes.join(", ")} {it.clashes.length === 1 ? "is" : "are"} also on leave in this period</p>
         )}
-        {it.attachment && <p className="flex items-center gap-1.5 text-primary"><FileCheck2 className="size-4" aria-hidden /> Medical certificate attached</p>}
+        {it.attachment && (
+          <p className="flex items-center gap-1.5 text-primary"><FileCheck2 className="size-4" aria-hidden /> Medical certificate attached
+            {it.attachmentPath && <a className="ml-1 font-medium underline" href={`/api/certificate?path=${encodeURIComponent(it.attachmentPath)}`} target="_blank" rel="noreferrer">View</a>}</p>
+        )}
       </div>
     );
   }
@@ -40,21 +44,27 @@ function Details({ it }: { it: ApprovalItem }) {
   return <div className="text-sm"><p className="font-medium">{it.holiday} · {formatDayShort(it.date)}</p><p className="text-muted">Becomes a paid holiday for them; {it.leftAfter} of 2 optional holidays left afterwards.</p></div>;
 }
 
-function RequestCard({ it, onDecide }: { it: ApprovalItem; onDecide: (id: string, outcome: "approved" | "rejected", comment: string) => void }) {
+function RequestCard({ it, onDecide }: { it: ApprovalItem; onDecide: (it: ApprovalItem, outcome: "approved" | "rejected", comment: string) => Promise<string | null> }) {
   const [comment, setComment] = useState("");
   const [err, setErr] = useState<string | null>(null);
   const [commentErr, setCommentErr] = useState<string | null>(null);
   const { label, Icon } = KIND[it.kind];
   const reason = "reason" in it ? it.reason : null;
 
-  const reject = () => {
+  const [busy, setBusy] = useState(false);
+  const reject = async () => {
+    setErr(null);
     if (comment.trim() === "") { setCommentErr("Add a short comment so the employee knows why"); return; }
-    onDecide(it.id, "rejected", comment.trim());
+    setCommentErr(null); setBusy(true);
+    const e = await onDecide(it, "rejected", comment.trim());
+    setBusy(false); if (e) setErr(e);
   };
-  const approve = () => {
-    setCommentErr(null);
+  const approve = async () => {
+    setCommentErr(null); setErr(null);
     if (it.kind === "leave" && it.failsOnApprove) { setErr(it.failsOnApprove); return; }
-    onDecide(it.id, "approved", comment.trim());
+    setBusy(true);
+    const e = await onDecide(it, "approved", comment.trim());
+    setBusy(false); if (e) setErr(e);
   };
 
   return (
@@ -76,25 +86,30 @@ function RequestCard({ it, onDecide }: { it: ApprovalItem; onDecide: (id: string
           <textarea id={`c-${it.id}`} className={clsx(textareaCls, "min-h-16")} value={comment} onChange={(e) => setComment(e.target.value)} aria-invalid={!!commentErr} />
         </Field>
         <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={reject}>Reject</Button>
-          <Button onClick={approve}>Approve</Button>
+          <Button variant="secondary" disabled={busy} onClick={reject}>Reject</Button>
+          <Button disabled={busy} onClick={approve}>Approve</Button>
         </div>
       </CardBody>
     </Card>
   );
 }
 
-export function ApprovalsView({ items, decided }: { items: ApprovalItem[]; decided: { id: string; text: string; outcome: string; comment: string }[] }) {
+export function ApprovalsView({ items, decided, live = false }: { items: ApprovalItem[]; decided: { id: string; text: string; outcome: string; comment: string }[]; live?: boolean }) {
   const [pending, setPending] = useState(items);
   const [done, setDone] = useState(decided);
   const [tab, setTab] = useState<"all" | ApprovalItem["kind"] | "decided">("all");
   const [notice, setNotice] = useState<string | null>(null);
 
-  const decide = (id: string, outcome: "approved" | "rejected", comment: string) => {
-    const it = pending.find((p) => p.id === id)!;
+  const decide = async (it: ApprovalItem, outcome: "approved" | "rejected", comment: string): Promise<string | null> => {
+    const id = it.id;
+    if (live) {
+      const r = await decideRequest({ kind: it.kind, id, decision: outcome === "approved" ? "approve" : "reject", comment });
+      if (!r.ok) return r.error;
+    }
     setPending((ps) => ps.filter((p) => p.id !== id));
     setDone((d) => [{ id, text: `${it.code} ${it.name} · ${KIND[it.kind].label}`, outcome, comment: comment || (outcome === "approved" ? "Approved" : "") }, ...d]);
-    setNotice(`${outcome === "approved" ? "Approved" : "Rejected"}. The employee is notified. (Sample: the real screen calls the decide function.)`);
+    setNotice(`${outcome === "approved" ? "Approved" : "Rejected"}. The employee is notified.${live ? "" : " (Sample data.)"}`);
+    return null;
   };
 
   const count = (k: ApprovalItem["kind"]) => pending.filter((p) => p.kind === k).length;

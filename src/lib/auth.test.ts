@@ -13,7 +13,8 @@ vi.mock("@clerk/nextjs/server", () => ({
 }));
 const db = { me: null as unknown, linked: [] as unknown[][] };
 vi.mock("@/lib/db/client", () => ({
-  systemSql: () => (...a: unknown[]) => { db.linked.push(a); return Promise.resolve([]); },
+  q: (s: TemplateStringsArray, ...v: unknown[]) => ({ text: s.join("?"), values: v }),
+  runSystem: async (x: { values: unknown[] }) => { db.linked.push(["sql", ...x.values]); return []; },
   withUser: async () => [[{ me: db.me }]],
 }));
 const flags = { clerkEnabled: true };

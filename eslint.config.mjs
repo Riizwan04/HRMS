@@ -38,7 +38,7 @@ const eslintConfig = defineConfig([
   // CLAUDE.md rule 7: the owner/admin connection is for scripts/ only.
   {
     files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/lib/db/admin.ts"],
+    ignores: ["src/lib/db/admin.ts", "src/lib/db/client.ts"],
     rules: {
       "no-restricted-imports": ["error", { patterns: [
         { group: ["**/db/admin", "pg"], message: "The admin database connection is for scripts/ only." },

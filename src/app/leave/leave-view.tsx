@@ -1,20 +1,24 @@
 "use client";
 
 import { FileCheck2, Plane } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { RequestStatusBadge } from "@/components/request-status-badge";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { formatRange } from "@/lib/time/ist";
 import type { LeaveHistoryRow } from "@/lib/preview-data";
+import { cancelLeave } from "@/modules/leave/actions";
 
 type Balance = { code: string; name: string; opening: number; accrued: number; adjusted: number; used: number; pending: number; available: number };
 const f = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : String(x));
 
-export function LeaveView({ balances, lopTaken, history, today, role }: {
-  balances: Balance[]; lopTaken: number; history: LeaveHistoryRow[]; today: string; role: string;
+export function LeaveView({ balances, lopTaken, history, today, role, live = false }: {
+  balances: Balance[]; lopTaken: number; history: LeaveHistoryRow[]; today: string; role: string; live?: boolean;
 }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
   const [rows, setRows] = useState(history);
   const [status, setStatus] = useState("all");
   const [confirm, setConfirm] = useState<LeaveHistoryRow | null>(null);
@@ -111,9 +115,21 @@ export function LeaveView({ balances, lopTaken, history, today, role }: {
         <ConfirmDialog title={`Cancel ${confirm.type} ${formatRange(confirm.from, confirm.to)}?`} confirmLabel="Cancel leave"
           onClose={() => setConfirm(null)}
           onConfirm={() => {
-            setRows((rs) => rs.map((r) => (r.id === confirm.id ? { ...r, status: "cancelled" } : r)));
-            setNotice("Leave cancelled and your balance restored. (Sample: the real screen calls cancel_leave().)");
+            const id = confirm.id;
             setConfirm(null);
+            if (!live) {
+              setRows((rs) => rs.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r)));
+              setNotice("Leave cancelled and your balance restored. (Sample data.)");
+              return;
+            }
+            startTransition(async () => {
+              try {
+                await cancelLeave({ id });
+                setRows((rs) => rs.map((r) => (r.id === id ? { ...r, status: "cancelled" } : r)));
+                setNotice("Leave cancelled and your balance restored.");
+                router.refresh();
+              } catch { setNotice("That request can't be cancelled any more."); }
+            });
           }}>
           Your balance will be restored.
         </ConfirmDialog>

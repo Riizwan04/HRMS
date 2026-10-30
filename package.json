@@ -12,11 +12,13 @@
     "test:tz": "TZ=UTC vitest run && TZ=America/Los_Angeles vitest run && TZ=Pacific/Kiritimati vitest run",
     "typecheck": "tsc --noEmit",
     "db:migrate": "tsx scripts/migrate.ts",
-    "db:seed": "tsx scripts/seed.ts"
+    "db:seed": "tsx scripts/seed.ts",
+    "test:int": "bash scripts/test-integration.sh"
   },
   "dependencies": {
     "@clerk/nextjs": "^7.9.20",
     "@neondatabase/serverless": "^1.2.0",
+    "@vercel/blob": "^2.8.2",
     "clsx": "^2.1.1",
     "lucide-react": "^1.61.0",
     "next": "16.4.3",
