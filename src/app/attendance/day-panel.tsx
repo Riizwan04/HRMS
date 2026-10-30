@@ -1,12 +1,14 @@
 "use client";
 
 import { CheckCircle2, X } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { StatusBadge, type DayStatus } from "@/components/status-badge";
 import { Button } from "@/components/ui/button";
 import { Field, inputCls, textareaCls } from "@/components/ui/field";
 import type { DayRow } from "@/lib/attendance-types";
 import { diffDays, formatDayShort, formatTimeIST } from "@/lib/time/ist";
+import { requestRegularisation, requestWfh } from "@/modules/attendance/actions";
 
 const BADGE: Partial<Record<DayRow["status"], DayStatus>> = {
   present: "present", half_day: "half_day", absent: "absent", on_leave: "on_leave", holiday: "holiday", weekly_off: "weekly_off",
@@ -15,7 +17,10 @@ const hm = (m: number) => `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, 
 type Mode = "view" | "regularise" | "wfh";
 
 // Preview only: the real panel calls request_regularisation() / request_wfh(); the database enforces every rule.
-export function DayPanel({ row, today, windowDays, onClose }: { row: DayRow; today: string; windowDays: number; onClose: () => void }) {
+export function DayPanel({ row, today, windowDays, onClose, live = false }: { row: DayRow; today: string; windowDays: number; onClose: () => void; live?: boolean }) {
+  const router = useRouter();
+  const [busy, startTransition] = useTransition();
+  const [serverError, setServerError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("view");
   const [inT, setInT] = useState("09:55");
   const [outT, setOutT] = useState("18:00");
@@ -32,6 +37,19 @@ export function DayPanel({ row, today, windowDays, onClose }: { row: DayRow; tod
   const submit = () => {
     setTouched(true);
     if (reason.trim().length < 5 || (mode === "regularise" && outT <= inT)) return;
+    if (live) {
+      setServerError(null);
+      startTransition(async () => {
+        const r = mode === "regularise"
+          ? await requestRegularisation({ date: row.day, inTime: inT, outTime: outT || null, reason })
+          : await requestWfh({ date: row.day, reason });
+        if (!r.ok) { setServerError(r.error); return; }
+        setDone(mode === "regularise" ? "Correction requested. Your manager will review it; attendance changes only after approval." : "WFH requested. It counts as Present only after your manager approves.");
+        setMode("view");
+        router.refresh();
+      });
+      return;
+    }
     setDone(mode === "regularise" ? "Correction requested. Your manager will review it; attendance changes only after approval." : "WFH requested. It counts as Present only after your manager approves.");
     setMode("view");
   };
@@ -63,7 +81,7 @@ export function DayPanel({ row, today, windowDays, onClose }: { row: DayRow; tod
           {row.worked_minutes !== null && (<><dt className="text-muted">Worked</dt><dd>{hm(row.worked_minutes)}</dd></>)}
         </dl>
 
-        {done && <p className="mb-3 flex items-start gap-2 rounded-lg bg-st-present-bg p-3 text-sm text-st-present"><CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden /> {done} <span className="opacity-70">(sample)</span></p>}
+        {done && <p className="mb-3 flex items-start gap-2 rounded-lg bg-st-present-bg p-3 text-sm text-st-present"><CheckCircle2 className="mt-0.5 size-4 shrink-0" aria-hidden /> {done} {!live && <span className="opacity-70">(sample)</span>}</p>}
 
         {mode === "view" && (
           <div className="flex flex-col gap-2">
@@ -87,9 +105,10 @@ export function DayPanel({ row, today, windowDays, onClose }: { row: DayRow; tod
             <Field id="reason" label="Reason" required hint="At least 5 characters" error={reasonErr}>
               <textarea id="reason" className={textareaCls} value={reason} onChange={(e) => setReason(e.target.value)} onBlur={() => setTouched(true)} aria-invalid={!!reasonErr} maxLength={500} />
             </Field>
+            {serverError && <p role="alert" className="text-sm text-danger">{serverError}</p>}
             <div className="flex gap-2">
               <Button type="button" variant="secondary" className="flex-1" onClick={() => setMode("view")}>Cancel</Button>
-              <Button type="submit" className="flex-1">Submit request</Button>
+              <Button type="submit" className="flex-1" disabled={busy}>{busy ? "Sending..." : "Submit request"}</Button>
             </div>
           </form>
         )}

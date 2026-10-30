@@ -151,7 +151,7 @@ export const decidedItems = [
 
 // Holiday calendar (S11) sample data. The real list is imported by HR from the official Goa notification.
 export type HolidayType = "national" | "state" | "optional";
-export type HolidayRow = { id: string; site: "ho" | "plant"; date: string; name: string; type: HolidayType; onWeeklyOff: boolean };
+export type HolidayRow = { id: string; site: string; date: string; name: string; type: HolidayType; onWeeklyOff: boolean };
 export const holidaySites = [
   { key: "ho" as const, name: "Panaji Head Office", week: "5-day week, Saturday and Sunday off" },
   { key: "plant" as const, name: "Verna Plant", week: "6-day week, Sunday off" },

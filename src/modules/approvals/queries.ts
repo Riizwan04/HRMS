@@ -58,3 +58,10 @@ export async function getDecisions(): Promise<Decision[]> {
     id: String(r.id), text: `${r.employee_code} ${r.employee_name} · ${r.label}`, outcome: String(r.outcome), comment: (r.comment as string | null) ?? "",
   }));
 }
+
+/** How many requests wait for the caller's decision (dashboard card). */
+export async function countPendingApprovals(): Promise<number> {
+  const me = await requireEmployee();
+  const [[row]] = await withUser({ sub: me.sub }, [q`select count(*)::int as n from public.pending_approvals()`]);
+  return Number(row.n);
+}

@@ -1,2 +1,2 @@
-export { getDecisions, getPendingApprovals } from "./queries";
+export { countPendingApprovals, getDecisions, getPendingApprovals } from "./queries";
 export { decideRequest } from "./actions";

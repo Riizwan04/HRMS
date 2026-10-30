@@ -2,15 +2,17 @@
 
 import clsx from "clsx";
 import { AlertCircle, CalendarDays, Info, Plus, X } from "lucide-react";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
 import { RequestStatusBadge } from "@/components/request-status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Field, inputCls } from "@/components/ui/field";
 import type { HolidayRow, HolidayType } from "@/lib/preview-data";
 import { formatDayShort, formatMonth } from "@/lib/time/ist";
+import { addHoliday, cancelOptional, requestOptional } from "@/modules/holidays/actions";
 
-type SiteKey = "ho" | "plant";
+type SiteKey = string;
 type Site = { key: SiteKey; name: string; week: string };
 const TYPE: Record<HolidayType, { label: string; cls: string }> = {
   national: { label: "National", cls: "bg-st-holiday-bg text-st-holiday" },
@@ -19,9 +21,30 @@ const TYPE: Record<HolidayType, { label: string; cls: string }> = {
 };
 const QUOTA = 2;
 
-export function HolidaysView({ sites, rows, mySite, start, today, isHr }: {
-  sites: Site[]; rows: HolidayRow[]; mySite: SiteKey; start: Record<string, "pending" | "approved">; today: string; isHr: boolean;
+export function HolidaysView({ sites, rows, mySite, start, today, isHr, live = false }: {
+  sites: Site[]; rows: HolidayRow[]; mySite: SiteKey; start: Record<string, "pending" | "approved">; today: string; isHr: boolean; live?: boolean;
 }) {
+  const router = useRouter();
+  const [, startTransition] = useTransition();
+  const [errorNote, setErrorNote] = useState<string | null>(null);
+  const choose = (r: HolidayRow) => {
+    if (!live) { setMine({ ...mine, [r.id]: "pending" }); setNotice(`Requested ${r.name}. Your manager will approve it. (Sample)`); return; }
+    setErrorNote(null);
+    startTransition(async () => {
+      const res = await requestOptional({ holidayId: r.id });
+      if (!res.ok) { setErrorNote(res.error); return; }
+      setMine((m) => ({ ...m, [r.id]: "pending" })); setNotice(`Requested ${r.name}. Your manager will approve it.`); router.refresh();
+    });
+  };
+  const unchoose = (r: HolidayRow) => {
+    if (!live) { const { [r.id]: _gone, ...rest } = mine; void _gone; setMine(rest); setNotice(`Cancelled ${r.name}; the quota is free again. (Sample)`); return; }
+    setErrorNote(null);
+    startTransition(async () => {
+      const res = await cancelOptional({ holidayId: r.id });
+      if (!res.ok) { setErrorNote(res.error); return; }
+      setMine((m) => { const { [r.id]: _gone, ...rest } = m; void _gone; return rest; }); setNotice(`Cancelled ${r.name}; the quota is free again.`); router.refresh();
+    });
+  };
   const [site, setSite] = useState<SiteKey>(mySite);
   const [mine, setMine] = useState(start);
   const [adding, setAdding] = useState(false);
@@ -53,6 +76,7 @@ export function HolidaysView({ sites, rows, mySite, start, today, isHr }: {
           <Info className="mt-0.5 size-4 shrink-0" aria-hidden /> You are viewing {viewing.name}&apos;s calendar (read-only). Your site is {sites.find((s) => s.key === mySite)!.name}.
         </p>
       )}
+      {errorNote && <p role="alert" className="mb-3 rounded-lg border border-danger p-3 text-sm text-danger">{errorNote}</p>}
       {notice && <p role="status" className="mb-3 rounded-lg bg-st-present-bg p-3 text-sm text-st-present">{notice}</p>}
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -80,10 +104,10 @@ export function HolidaysView({ sites, rows, mySite, start, today, isHr }: {
                     <span className={clsx("rounded-full px-2.5 py-1 text-xs font-semibold", TYPE[r.type].cls)}>{TYPE[r.type].label}</span>
                     {own && r.type === "optional" && st && <RequestStatusBadge status={st} />}
                     {own && r.type === "optional" && future && !st && (
-                      <Button size="sm" variant="secondary" disabled={left === 0} onClick={() => { setMine({ ...mine, [r.id]: "pending" }); setNotice(`Requested ${r.name}. Your manager will approve it. (Sample)`); }}>Choose this day</Button>
+                      <Button size="sm" variant="secondary" disabled={left === 0} onClick={() => choose(r)}>Choose this day</Button>
                     )}
                     {own && r.type === "optional" && future && st && (
-                      <Button size="sm" variant="ghost" onClick={() => { const { [r.id]: _gone, ...rest } = mine; void _gone; setMine(rest); setNotice(`Cancelled ${r.name}; the quota is free again. (Sample)`); }}>Cancel</Button>
+                      <Button size="sm" variant="ghost" onClick={() => unchoose(r)}>Cancel</Button>
                     )}
                   </div>
                 </li>
@@ -94,13 +118,15 @@ export function HolidaysView({ sites, rows, mySite, start, today, isHr }: {
       ))}
       {own && left === 0 && <p className="flex items-center gap-1.5 text-sm text-muted"><AlertCircle className="size-4" aria-hidden /> You&apos;ve already chosen 2 optional holidays for 2026.</p>}
 
-      {adding && <AddHoliday sites={sites} existing={rows} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); setNotice("Holiday saved. Any leave booked on that date is released and balances restored automatically. (Sample)"); }} />}
+      {adding && <AddHoliday sites={sites} existing={rows} live={live} onClose={() => setAdding(false)} onSaved={() => { setAdding(false); setNotice(`Holiday saved. Any leave booked on that date is released and balances restored automatically.${live ? "" : " (Sample)"}`); if (live) router.refresh(); }} />}
     </>
   );
 }
 
-function AddHoliday({ sites, existing, onClose, onSaved }: { sites: Site[]; existing: HolidayRow[]; onClose: () => void; onSaved: () => void }) {
-  const [picked, setPicked] = useState<SiteKey[]>(["ho", "plant"]);
+function AddHoliday({ sites, existing, live, onClose, onSaved }: { sites: Site[]; existing: HolidayRow[]; live: boolean; onClose: () => void; onSaved: () => void }) {
+  const [picked, setPicked] = useState<SiteKey[]>(sites.map((s) => s.key));
+  const [saving, startSave] = useTransition();
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [date, setDate] = useState("");
   const [name, setName] = useState("");
   const [type, setType] = useState<HolidayType>("state");
@@ -115,7 +141,13 @@ function AddHoliday({ sites, existing, onClose, onSaved }: { sites: Site[]; exis
   return (
     <div className="fixed inset-0 z-30 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <form role="dialog" aria-modal="true" aria-label="Add holiday" onClick={(e) => e.stopPropagation()} noValidate
-        onSubmit={(e) => { e.preventDefault(); setTouched(true); if (!bad) onSaved(); }}
+        onSubmit={(e) => {
+          e.preventDefault(); setTouched(true);
+          if (bad) return;
+          if (!live) { onSaved(); return; }
+          setSaveError(null);
+          startSave(async () => { const r = await addHoliday({ siteIds: picked, date, name, type }); if (r.ok) onSaved(); else setSaveError(r.error); });
+        }}
         className="flex max-h-[90vh] w-full max-w-md flex-col gap-4 overflow-y-auto rounded-xl bg-surface p-5 shadow-xl">
         <div className="flex items-center justify-between"><h2 className="text-lg font-semibold">Add holiday</h2>
           <button type="button" aria-label="Close" onClick={onClose} className="rounded-lg p-2 hover:bg-bg"><X className="size-5" aria-hidden /></button></div>
@@ -132,7 +164,8 @@ function AddHoliday({ sites, existing, onClose, onSaved }: { sites: Site[]; exis
         <Field id="hn" label="Name" required error={touched ? errs.name : null}><input id="hn" className={inputCls} value={name} onChange={(e) => setName(e.target.value)} /></Field>
         <Field id="ht" label="Type" required><select id="ht" className={inputCls} value={type} onChange={(e) => setType(e.target.value as HolidayType)}>
           <option value="national">National</option><option value="state">State</option><option value="optional">Optional</option></select></Field>
-        <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit">Save holiday</Button></div>
+        {saveError && <p role="alert" className="text-sm text-danger">{saveError}</p>}
+        <div className="flex justify-end gap-2"><Button type="button" variant="secondary" onClick={onClose}>Cancel</Button><Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save holiday"}</Button></div>
       </form>
     </div>
   );
