@@ -59,7 +59,7 @@ export const leaveScenarios: LeaveScenario[] = [
 ];
 
 /** Which preview pages exist (the shell shows the others as "soon"). */
-export const PREVIEW_ENABLED = ["home", "leave", "attendance", "approvals", "holidays"];
+export const PREVIEW_ENABLED = ["home", "leave", "attendance", "approvals", "holidays", "profile", "employees", "team", "teamleave", "reports", "settings"];
 
 const od = (day: string, status: DayStatusKey, extra: Partial<DayRow> = {}): DayRow => ({
   day, status, is_wfh: false, is_late: false, worked_minutes: null, missing_checkout: false,

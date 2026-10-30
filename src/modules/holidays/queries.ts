@@ -2,6 +2,7 @@ import "server-only";
 import { requireEmployee } from "@/lib/auth";
 import { q, withUser } from "@/lib/db/client";
 import type { HolidayRow, HolidayType } from "@/lib/preview-data";
+import { todayIST } from "@/lib/time/ist";
 
 // Reads for the holiday calendar. Reference data is readable by every signed-in employee (RLS), so plain selects are fine here.
 const DAY = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -22,7 +23,7 @@ export async function getMySiteId(): Promise<string> {
 export async function getHolidays(year: number): Promise<{ sites: Site[]; holidays: HolidayRow[] }> {
   const me = await requireEmployee();
   const [sites, rows] = await withUser({ sub: me.sub }, [
-    q`select l.id, l.name, (select w.weekly_off_days from public.location_weekly_offs w where w.location_id = l.id and w.effective_from <= current_date
+    q`select l.id, l.name, (select w.weekly_off_days from public.location_weekly_offs w where w.location_id = l.id and w.effective_from <= ${todayIST()}::date
                               order by w.effective_from desc limit 1) as offs
         from public.locations l where l.is_active order by l.name`,
     q`select h.id, h.location_id, h.holiday_date::text as d, h.name, h.type::text as type,

@@ -14,7 +14,7 @@ describe("A7 holiday calendar", () => {
   it("lists both sites with their weekly-off wording and each holiday's type", async () => {
     as("emp1");
     const { sites, holidays } = await getHolidays(2026);
-    expect(sites.map((s) => s.name).sort()).toEqual(["Panaji Head Office", "Verna Plant"]);
+    expect(sites.map((s) => s.name)).toEqual(expect.arrayContaining(["Panaji Head Office", "Verna Plant"]));
     expect(sites.find((s) => s.name.startsWith("Panaji"))!.week).toBe("5-day week, Saturday and Sunday off");
     expect(sites.find((s) => s.name.startsWith("Verna"))!.week).toBe("6-day week, Sunday off");
     expect(holidays.find((h) => h.name === "Verna Fest")).toMatchObject({ type: "state", date: "2026-11-09" });

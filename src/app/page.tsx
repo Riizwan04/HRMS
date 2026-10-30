@@ -90,7 +90,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
       {(role === "manager" || role === "hr") && (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           <Card>
-            <CardHeader title={`${role === "hr" ? "Everyone" : "Team"} today (${t.present + t.wfh + t.leave + t.notIn})`} />
+            <CardHeader title={`${role === "hr" ? "Everyone" : "Team"} today (${t.present + t.wfh + t.leave + t.notIn})`} action={live ? <LinkButton href="/team" size="sm" variant="secondary">Details</LinkButton> : undefined} />
             <CardBody className="text-sm">Present {t.present} · WFH {t.wfh} · On leave {t.leave} · Not checked in {t.notIn}</CardBody>
           </Card>
           <Card>
