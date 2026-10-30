@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
-/* Navy theme (DESIGN.md section 2.1). All text pairs verified >= 4.5:1; the status colours keep their own light chips. */
+/* Slate and Sky theme (DESIGN.md section 2.1). All text pairs verified >= 4.5:1; the status colours keep their own light chips. */
 :root {
   color-scheme: dark;
-  --bg: #0a1a33;
-  --sidebar: #071327;
-  --surface: #112547;
-  --surface-2: #17325c;
-  --text: #eaf0fa;
-  --muted: #a9bad6;
-  --border: #2a4775;
-  --input: #6f8db8;
-  --primary: #2dd4bf;
-  --primary-dark: #14b8a6;
-  --on-primary: #04213a;
+  --bg: #10151d;
+  --sidebar: #0b0f15;
+  --surface: #182130;
+  --surface-2: #212c40;
+  --text: #eef3fa;
+  --muted: #a7b3c6;
+  --border: #33425c;
+  --input: #7487a6;
+  --primary: #38bdf8;
+  --primary-dark: #0ea5e9;
+  --on-primary: #04202f;
   --danger: #fca5a5;
   --warning: #fcd34d;
   --success: #86efac;
@@ -50,7 +50,7 @@
 }
 
 body {
-  background: radial-gradient(1100px 520px at 85% -8%, rgba(45, 212, 191, 0.10), transparent), radial-gradient(900px 500px at -5% 105%, rgba(56, 120, 255, 0.12), transparent), var(--bg);
+  background: radial-gradient(1100px 520px at 85% -8%, rgba(56, 189, 248, 0.10), transparent), radial-gradient(900px 500px at -5% 105%, rgba(148, 163, 184, 0.10), transparent), var(--bg);
   background-attachment: fixed;
   color: var(--text);
   font-family: var(--font-inter), system-ui, sans-serif;

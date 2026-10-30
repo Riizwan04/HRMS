@@ -7,7 +7,7 @@ import { PREVIEW_ENABLED } from "@/lib/preview-data";
 import { getFormOptions } from "@/modules/employees";
 import { NewEmployeeForm } from "./new-employee-form";
 
-export const metadata = { title: "Add employee · Kinara" };
+export const metadata = { title: "Add employee · Samudra" };
 
 export default async function Page() {
   const me = await requireRole("hr", "hr");

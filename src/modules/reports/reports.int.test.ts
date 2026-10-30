@@ -30,7 +30,7 @@ describe("L8 month-end summary (LR-18) and CSV download (LR-22 masking)", () => 
     const lines = csv.trim().split("\n");
     expect(lines[0]).toBe("Employee code,Name,Location,Days employed,Days present,WFH days,CL,SL,EL,Maternity,Paternity,LOP days,Holidays,Weekly offs,Late marks");
     expect(lines).toHaveLength(rows + 1);
-    expect(filename).toBe("kinara-attendance-2026-10.csv");
+    expect(filename).toBe("samudra-attendance-2026-10.csv");
     expect(csv).not.toMatch(/ABCDE|XXXX|HDFC|\d{12}/);
   });
   it("each download is logged with a hash of its content", async () => {

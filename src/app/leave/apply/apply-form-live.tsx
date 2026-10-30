@@ -14,7 +14,7 @@ import { applyLeave, previewLeave, uploadCertificate } from "@/modules/leave/act
 type Option = { id: string; code: string; name: string; halfDayAllowed: boolean; available: number | null };
 const fmt = (x: number) => (Number.isInteger(x) ? x.toFixed(1) : String(x));
 
-export function ApplyFormLive({ types, manager, today }: { types: Option[]; manager: string | null; today: string }) {
+export function ApplyFormLive({ types, manager, today, uploadsReady = true }: { types: Option[]; manager: string | null; today: string; uploadsReady?: boolean }) {
   const [typeId, setTypeId] = useState(types[0]?.id ?? "");
   const [from, setFrom] = useState(today);
   const [to, setTo] = useState(today);
@@ -100,7 +100,7 @@ export function ApplyFormLive({ types, manager, today }: { types: Option[]; mana
             <textarea id="reason" className={textareaCls} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
             <span className="text-right text-xs text-muted">{reason.length}/500</span>
           </Field>
-          <Field id="file" label="Attachment" hint={plan?.requires_document ? "Required for this request. PDF, JPG or PNG under 5 MB." : "Optional. PDF, JPG or PNG under 5 MB."}>
+          <Field id="file" label="Attachment" hint={plan?.requires_document ? (uploadsReady ? "Required for this request. PDF, JPG or PNG under 5 MB." : "A medical certificate is required for this request, but file uploads are switched off in this deployment. Please contact HR.") : "Optional. PDF, JPG or PNG under 5 MB."}>
             <label className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-lg border border-input bg-surface px-3 text-sm font-medium">
               <Paperclip className="size-4" aria-hidden /> {file?.name ?? "Upload a file"}
               <input id="file" type="file" accept=".pdf,.jpg,.jpeg,.png" className="sr-only" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />

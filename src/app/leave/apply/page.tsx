@@ -7,7 +7,7 @@ import { getBalances, getLeaveTypes } from "@/modules/leave";
 import { ApplyForm } from "./apply-form";
 import { ApplyFormLive } from "./apply-form-live";
 
-export const metadata = { title: "Apply for leave · Kinara" };
+export const metadata = { title: "Apply for leave · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;
@@ -19,7 +19,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
   return (
     <AppShell demo={me.demo} liveData={!me.demo} role={role} active="leave" enabled={PREVIEW_ENABLED} userName={me.name} dateLine={dateLineFor(me.demo)}>
       <h1 className="mb-4 text-2xl font-semibold">Apply for leave</h1>
-      {me.demo ? <ApplyForm scenarios={leaveScenarios} manager="Mohan Manager" /> : <ApplyFormLive types={options} manager={me.managerName} today={todayIST()} />}
+      {me.demo ? <ApplyForm scenarios={leaveScenarios} manager="Mohan Manager" /> : <ApplyFormLive types={options} manager={me.managerName} today={todayIST()} uploadsReady={Boolean(process.env.BLOB_READ_WRITE_TOKEN)} />}
     </AppShell>
   );
 }

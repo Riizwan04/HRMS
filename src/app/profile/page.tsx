@@ -5,7 +5,7 @@ import { requireEmployee } from "@/lib/auth";
 import { dateLineFor } from "@/lib/page-context";
 import { PREVIEW_ENABLED } from "@/lib/preview-data";
 
-export const metadata = { title: "My profile · Kinara" };
+export const metadata = { title: "My profile · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;

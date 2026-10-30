@@ -1,84 +1,78 @@
-# Kinara — Konkan Coastal Foods HRMS
+# Samudra — Konkan Coastal Foods HRMS
 
-Employee Master, Attendance and Leave, plus an HR assistant, for Konkan Coastal Foods (Panaji head office, Verna plant).
+Employee Master, Attendance and Leave, plus an HR assistant (AI agent), for Konkan Coastal Foods (Panaji head office, Verna plant).
 Built for the *HRMS Build* assignment (AI Applications in HR).
 
-**Live demo:** https://hrms-xqz4.vercel.app (sign in with your email; Clerk emails a one-time code) · **Status: work in progress (milestone 1 of 2 delivered, see below)**
+**Live app:** https://hrms-xqz4.vercel.app (sign in; dev-mode Clerk, see test logins below)
 
-## What works today
+## Test logins
 
-The screens below run on **sample data** (a "Demo · sample data" tag is shown on every page). The **business rules behind them are already
-implemented in the database and proven by 188 automated tests**. Connecting sign-in and the live database to these screens is the next milestone.
+Sign in at the live URL. These are Clerk development test emails: if asked for a code, enter **424242**.
 
-| Screen | What it shows | Brief reference |
+| Role | Email | What it can do |
 |---|---|---|
-| Home dashboard (Employee / Manager / HR views) | Check in/out, leave balances, pending requests, team and organisation cards | Suggested screens p.14 |
-| Apply for leave | Live working-days calculator (weekends/holidays skipped, no sandwich rule), balance after, convert excess to Loss of Pay, certificate rule | L3, L1 |
-| My leave | Balance breakdown (opening, accrued, adjusted, used, pending), history, confirmed cancel | L2, L5 |
-| My attendance | Colour-coded month calendar, Late marks, regularisation and WFH requests with validation | A2, A4, A5 |
-| Approvals inbox | Leave, regularisation, WFH and optional-holiday requests; comment rules; failure shown inline | L4, A5 |
-| Holiday calendar | Panaji 5-day vs Verna 6-day calendars, optional holidays (2 a year) | A7 |
+| HR Admin | `riizhr+clerk_test@gmail.com` | everything: employees, settings, all reports, all approvals |
+| Manager | `riizmgr+clerk_test@gmail.com` | own team: team attendance, leave calendar, approvals, team report |
+| Employee | `riizemp+clerk_test@gmail.com` | own attendance, leave, profile, holidays, Ask HR |
 
-Screenshots: [`docs/screenshots`](docs/screenshots). Latest test run: [`docs/test-report.txt`](docs/test-report.txt).
+The password is whatever was set when the user was created in Clerk. Any other email gets "You do not have access yet". Roles come from the
+`employees` table, never from Clerk. The 17 other seeded people (`@kcf.example`) are data only and cannot sign in.
 
-![Apply for leave](docs/screenshots/03-apply-leave.png)
-![My attendance](docs/screenshots/04-my-attendance.png)
+## What works (all on live data, no sample data)
 
-## What is built behind the screens (verified)
-
-- **Data model**: 27 PostgreSQL tables with keys and constraints, row-level security on every table, masked views for PAN/Aadhaar/bank, append-only audit log (`db/migrations`).
-- **Rules, single implementation in the database**: working-day count by location (weekly offs, holidays, approved optional holidays), leave balance (pro-rating to the nearest 0.5, Earned Leave carry-forward capped at 30, CL/SL lapse), day status (Present / Half Day / Absent / On Leave / Holiday / Weekly Off, Late after 10:15 IST, three Lates = half-day LOP), month-end summary with reconciliation.
-- **Actions**: apply / approve / reject / cancel leave (balance re-checked at approval), check-in/out (one record per day), WFH, optional holidays, regularisation, employee add/edit/deactivate, PAN/bank reveal (logged; Aadhaar can never be revealed), leave released automatically when a holiday is added.
-- **Security tests**: employees cannot open others' profiles, managers see only direct reports, nobody approves their own request, deactivated employees are locked out after the last working day, no function is open to the public, the runtime login owns nothing.
-
-**188 database tests + 16 IST tests (run under 3 time zones) pass.** See [`docs/test-report.txt`](docs/test-report.txt).
-
-## Milestones
-
-| Milestone | Status |
+| Area | Features |
 |---|---|
-| 1. Research ([`RESEARCH.md`](RESEARCH.md)) | Done; statutory figures to be verified against primary texts |
-| 2. Architecture and design ([`ARCHITECTURE.md`](ARCHITECTURE.md), [`DESIGN.md`](DESIGN.md), [`CLAUDE.md`](CLAUDE.md)) | Done; faculty sign-off pending |
-| 3. Fresh setup, deployed | Done (Next.js on Vercel) |
-| 4. Database and rules | Done and tested locally; **not yet connected to the live app** |
-| 5. Login and roles | Next (Clerk sign-in, employee row linked by email) |
-| 6–10. Employee Master, Attendance, Leave, Approvals, Reports | Rules done; screens: 6 of 13 done (rest show "soon") |
-| 11. HR assistant agent | Designed ([`ARCHITECTURE.md`](ARCHITECTURE.md) section 7); not built |
-| 12. Test and polish | Ongoing |
+| Employee Master | add employee (multi-step, Indian field validation), searchable directory with filters, profile tabs (personal, job, statutory, bank, contact and emergency, history), self-service contact edit, reporting-line loop check, deactivate with last working day, masked PAN / Aadhaar / bank, logged Reveal (never for Aadhaar), audit history |
+| Attendance | check in / out (IST, one record a day), day status (Present, Half Day, Absent, On Leave, Holiday, Weekly Off, Late), WFH with manager approval, month calendar, regularisation, team attendance, holiday calendar per site with optional holidays (2 a year) |
+| Leave | leave types and quotas (Settings), balances with opening / accrued / used / pending, apply with live working-day count and convert-to-LOP, approve / reject / cancel, leave calendar with clash warnings, month-end summary CSV |
+| HR assistant | "Ask HR" panel: 7 required tools plus a month-end check for HR, guardrails (no approve/reject/cancel, 5-call cap, `agent_log`, no Aadhaar / PAN / bank to the model, numbers only from tools, writes only as drafts confirmed by a button), Hinglish |
+| Roles | HR Admin flag stored; Manager derived from reporting lines; checked on the server and by database row-level security |
 
-Not yet done, and shown as "soon" in the app: team attendance, leave calendar, employee directory and profile, add employee, reports (CSV), settings, the HR assistant, sign-in, the seed script with test logins.
+## Not included (skipped by the owner, decision logged in ARCHITECTURE.md section 12)
 
-## Sign-in
+- **Email notifications (L6):** requests are queued in `email_outbox`; no sender is connected (needs a Resend account and a verified domain). Managers see requests in Approvals and employees see status in My leave.
+- **Medical certificate upload:** sick leave over 2 days still requires a certificate, but file upload (Vercel Blob) is not connected, so such a request cannot be submitted. Code for it is in place.
+- **Research interview** (RESEARCH.md section 8): not conducted. Statutory figures in RESEARCH.md are tagged as unverified against primary texts.
+- Out of scope per the brief: payroll, PF/ESI/PT/TDS, recruitment, performance, biometric, shifts, mobile app, multi-tenant.
 
-Sign-in uses Clerk. It switches on automatically when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` are set (Vercel environment variables
-or `.env.local`): every page then requires login and the dashboard opens after it. Without the keys the app runs in demo mode (sample data, "View as" switch) and opens straight to the dashboard.
-With the keys, **roles come from the database**: the signed-in email must match an active employee, else `/access-denied`. Employees cannot open `/approvals`; HR Admin and Manager are decided by the `employees` table, never by the URL.
-Setup: `npm run db:migrate` then `npm run db:seed` (needs `DATABASE_URL_ADMIN` and `SEED_*_EMAIL`, see `.env.example`), then set `DATABASE_URL` (the `app_runtime` login) on Vercel.
-`/about` (project status) is always public.
-
-## Run it
+## Run it locally
 
 ```bash
 npm install
-npm run dev          # http://localhost:3000   (prototype screens use sample data)
+cp .env.example .env.local        # fill in the Clerk keys and DATABASE_URL (never commit it)
+npm run dev                        # http://localhost:3000   (no Clerk keys = sample-data demo mode)
 npm run lint && npm run typecheck
-npm run test:tz      # IST helper tests under 3 time zones
-npm run test:db      # database rules + security tests (needs local PostgreSQL 16 with pgTAP)
+npm run test:tz                    # unit tests under 3 time zones
+npm run test:db                    # database rules + security (pgTAP; needs local PostgreSQL 16 with pgTAP)
+npm run test:int                   # app-to-database tests (needs the same local PostgreSQL)
+npm run agent:prompts              # 21 assistant prompts against the real model (needs Neon + Gemini key)
 ```
+
+### Setting up the database (Neon)
+
+1. Apply `db/migrations/*.sql` in order (`npm run db:migrate` with `DATABASE_URL_ADMIN`, or paste them in the Neon SQL Editor).
+2. Seed the three test people: `npm run db:seed` with `SEED_HR_EMAIL`, `SEED_MANAGER_EMAIL`, `SEED_EMPLOYEE_EMAIL` (must equal the Clerk users' emails).
+3. Optional demo data (17 more people, 4 departments, 2026 holidays, attendance): run `db/seed/demo-data.sql` once.
+4. On Vercel set `DATABASE_URL` (the limited `app_runtime` login), the two Clerk keys and `GOOGLE_GENERATIVE_AI_API_KEY`. The owner/admin URL is never set on Vercel.
 
 Environment variables are listed, blank, in [`.env.example`](.env.example). No secrets are committed.
 
 ## Stack
 
-Next.js 16 (App Router, TypeScript, Tailwind) on Vercel · Neon PostgreSQL (row-level security) · Clerk (authentication only) · Vercel Blob · Resend · Vercel AI SDK. Reasons and rejected alternatives: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+Next.js 16 (App Router, TypeScript, Tailwind) on Vercel · Neon PostgreSQL (row-level security) · Clerk (authentication only) · Vercel AI SDK with Google Gemini ·
+Vitest, pgTAP, Playwright. Reasons and rejected alternatives: [`ARCHITECTURE.md`](ARCHITECTURE.md).
+
+## Tests
+
+34 unit tests under 3 time zones, 188 database tests (rule IDs `DV-*`, `AR-*`, `LR-*` in the names), 89 app-to-database tests. Latest run: [`docs/test-report.txt`](docs/test-report.txt).
 
 ## Repository map
 
 ```
 RESEARCH.md  ARCHITECTURE.md  DESIGN.md  CLAUDE.md   design documents (rules have IDs: LR-*, AR-*, DV-*)
-db/migrations   the database: tables, rules, actions, security
-db/tests        pgTAP tests citing the rule IDs
-src/lib/time    IST helpers (the only code allowed to touch clocks)
-src/app         the screens (prototype, on sample data); /about = project status
-docs/           screenshots, test report, logo
+db/migrations   the database: tables, rules, actions, security (one implementation of every rule)
+db/tests        pgTAP tests citing the rule IDs          db/seed   demo data
+src/modules     employees, attendance, leave, approvals, holidays, team, reports, settings, agent
+src/lib         IST helpers (the only code allowed to touch clocks), database client, auth, crypto
+src/app         the screens; docs/ screenshots (early demo-mode captures), test report, logo
 ```

@@ -7,7 +7,7 @@ import { getDecisions, getPendingApprovals } from "@/modules/approvals";
 import { approvalItems, decidedItems, PREVIEW_ENABLED, type Role } from "@/lib/preview-data";
 import { ApprovalsView } from "./approvals-view";
 
-export const metadata = { title: "Approvals · Kinara" };
+export const metadata = { title: "Approvals · Samudra" };
 
 // ?state=empty and ?state=loading show the designed states; ?role=employee shows what a non-approver gets.
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {

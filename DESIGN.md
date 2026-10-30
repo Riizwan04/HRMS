@@ -1,6 +1,6 @@
-# DESIGN.md — Kinara (Konkan Coastal Foods HRMS)
+# DESIGN.md — Samudra (Konkan Coastal Foods HRMS)
 
-Checkpoint 2. Revision 2, 2026-10-23 (navy theme; the dashboard is the front page at `/`). Companion to `ARCHITECTURE.md` (tables, RPCs, views) and `RESEARCH.md` §10 (rule IDs). **Paper only — no UI code yet.**
+Checkpoint 2. Revision 3, 2026-10-31 (renamed Samudra; Slate and Sky colours; the dashboard is the front page at `/`). Companion to `ARCHITECTURE.md` (tables, RPCs, views) and `RESEARCH.md` §10 (rule IDs). **Paper only — no UI code yet.**
 
 **Traceability convention.** Every button, input and badge below is bound to a schema column, view or RPC from `ARCHITECTURE.md` (§3 tables, §6.1 catalogue). Notation: `table.column`, `v_view.column`, `rpc_name()`. If an element has no binding it must not be built. §9 lists the gaps found while binding and how they were closed.
 
@@ -20,38 +20,38 @@ Checkpoint 2. Revision 2, 2026-10-23 (navy theme; the dashboard is the front pag
 
 ## 1. Brand
 
-**Name: Kinara** (Konkani/Hindi *kinara* = shore). Tagline: *People, simply.* Product title: "Kinara · Konkan Coastal Foods".
-**Logo:** a teal rounded square with a pale sun over two white-and-aqua waves — `docs/brand/kinara-logo.svg` (already in the repo). Used at 32 px in the sidebar/app bar, 64 px on the sign-in page, and as the favicon. Clear space = ¼ of the mark's width; never recolour except to mono-white on teal.
+**Name: Samudra** (Hindi *samudra* = ocean; renamed from Kinara on 2026-10-31). Tagline: *People, simply.* Product title: "Samudra · Konkan Coastal Foods".
+**Logo:** a sky-blue gradient rounded square with a pale sun over two white-and-light-blue waves — `docs/brand/samudra-logo.svg` (already in the repo). Used at 32 px in the sidebar/app bar, 64 px on the sign-in page, and as the favicon. Clear space = ¼ of the mark's width; never recolour except to mono-white on sky blue.
 
 ---
 
 ## 2. Design system
 
-### 2.1 Colour tokens (navy theme, owner decision 2026-10-23)
+### 2.1 Colour tokens (Slate and Sky, owner decision 2026-10-31)
 
-The first version used a light theme; the owner chose a modern **navy** look. Dark by design: deep navy page, lighter navy cards, teal accent.
+Dark by design: near-black slate page, lighter slate cards, sky-blue accent. Replaced the earlier navy and teal look; the owner compared four options on the real dashboard and chose this one.
 Status colours (2.3) are unchanged: they stay light chips with their own dark text so they read the same on every screen.
 Contrast ratios computed with the WCAG formula. Targets: >= 4.5:1 text, >= 3:1 non-text controls.
 
 | Token | Hex | Use | Contrast |
 |---|---|---|---|
-| `--bg` | `#0A1A33` | Page background (with a soft teal/blue glow) | text on it **15.18** |
-| `--sidebar` | `#071327` | Sidebar, top bar, phone tab bar | muted on it **9.44** |
-| `--surface` | `#112547` | Cards, tables, dialogs | text on it **13.30** |
-| `--surface-2` | `#17325C` | Secondary buttons, hovers | text on it **11.14** |
-| `--text` | `#EAF0FA` | Body text | see above |
-| `--text-muted` | `#A9BAD6` | Secondary text | **7.74** on surface, 8.84 on bg |
-| `--border` | `#2A4775` | Card and divider lines (decorative) | n/a |
-| `--input-border` | `#6F8DB8` | Input outlines | **4.48** vs surface (>= 3:1 required) |
-| `--primary` | `#2DD4BF` | Primary buttons, links, active nav, focus ring | **8.18** on surface, 9.97 on sidebar |
-| `--on-primary` | `#04213A` | Text on primary and danger buttons | **8.79** on primary |
-| `--primary-dark` | `#14B8A6` | Primary hover | on-primary on it **6.57** |
-| `--danger` | `#FCA5A5` | Errors, destructive | **8.02** on surface |
-| `--warning` | `#FCD34D` | Warnings | **10.56** |
-| `--success` | `#86EFAC` | Confirmations | **10.84** |
-| `--info` | `#7DD3FC` | Info banners | **9.13** |
+| `--bg` | `#10151D` | Page background (with a soft sky/slate glow) | text on it **16.42** |
+| `--sidebar` | `#0B0F15` | Sidebar, top bar, phone tab bar | n/a |
+| `--surface` | `#182130` | Cards, tables, dialogs | muted on it **7.63** |
+| `--surface-2` | `#212C40` | Secondary buttons, hovers | n/a |
+| `--text` | `#EEF3FA` | Body text | see above |
+| `--text-muted` | `#A7B3C6` | Secondary text | **7.63** on surface, 8.64 on bg |
+| `--border` | `#33425C` | Card and divider lines (decorative) | n/a |
+| `--input-border` | `#7487A6` | Input outlines | **4.43** vs surface (>= 3:1 required) |
+| `--primary` | `#38BDF8` | Primary buttons, links, active nav, focus ring | **7.55** on surface |
+| `--on-primary` | `#04202F` | Text on primary and danger buttons | **7.82** on primary |
+| `--primary-dark` | `#0EA5E9` | Primary hover | on-primary on it > 6 |
+| `--danger` | `#FCA5A5` | Errors, destructive | > 8 on surface |
+| `--warning` | `#FCD34D` | Warnings | > 10 |
+| `--success` | `#86EFAC` | Confirmations | > 10 |
+| `--info` | `#7DD3FC` | Info banners | > 9 |
 
-Never use colour as the only signal: errors carry an icon + text; statuses carry a label + icon (2.3). Keyboard focus ring is the teal primary (9.34 vs the page).
+Never use colour as the only signal: errors carry an icon + text; statuses carry a label + icon (2.3). Keyboard focus ring is the sky-blue primary (well above 3:1 against the page).
 
 ### 2.2 Typography, spacing, shape
 
@@ -259,7 +259,7 @@ Wireframe legend: `[ Button ]` button · `[____]` input · `( )` radio · `[x]` 
 
 Desktop, Employee:
 ```
-┌ Kinara ───────────────────────────────────── Fri 16 Oct 2026 · 9:58 am IST  [Ask HR] ┐
+┌ Samudra ───────────────────────────────────── Fri 16 Oct 2026 · 9:58 am IST  [Ask HR] ┐
 │ Good morning, Asha                                                                    │
 │ ┌─ Today ─────────────────────────┐ ┌─ Leave balance (2026) ────────────────────────┐ │
 │ │ {Weekly Off}/{Present}… status  │ │ ┌ CL ──────┐ ┌ SL ──────┐ ┌ EL ───────┐       │ │
@@ -279,7 +279,7 @@ Desktop, Employee:
 Phone (priority order; check-in is the first card, balances second):
 ```
 ┌─────────────────────┐
-│ ☰ Kinara     [Ask HR]│
+│ ☰ Samudra     [Ask HR]│
 │ Fri 16 Oct · 9:58 IST│
 │ ┌─ Today ───────────┐│
 │ │ {Not checked in}  ││
@@ -625,7 +625,7 @@ Employee onboarding and deactivation are entered from S2/S3/S4 (HR). **States.**
 | Reconciliation line | invariant LR-18 computed from the same rows (must be ✓ for every row) |
 | Pending warning | counts of pending `leave_requests`, `regularisation_requests`, `wfh_requests`, `optional_holiday_requests` dated in the month and scope |
 | Last-export banner | `month_exports` (`exported_at`, `exported_by`, `content_hash` vs current) |
-| **Download CSV** | server streams CSV (UTF-8 with BOM, ISO dates, `kinara_attendance_YYYY-MM_<scope>.csv`) → `log_month_export()` writes `month_exports`. **No PAN, Aadhaar or bank fields exist in the export**; the CSV writer still passes every cell through the mask filter (defence in depth) |
+| **Download CSV** | server streams CSV (UTF-8 with BOM, ISO dates, `samudra-attendance-YYYY-MM.csv`) → `log_month_export()` writes `month_exports`. **No PAN, Aadhaar or bank fields exist in the export**; the CSV writer still passes every cell through the mask filter (defence in depth) |
 **States.** *Loading:* table skeleton (10 rows × 12 cols). *Empty:* "No employees in this scope for {month}". *Error:* "Couldn't generate the summary [Retry]" — the Download button stays disabled. Pending-requests confirm dialog: "2 requests are still pending; the export will not include them. Download anyway?"
 
 ### S14 — Ask HR (assistant drawer / modal)

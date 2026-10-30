@@ -13,8 +13,8 @@ Out of scope (do not build): payroll/salary, PF/ESI/PT/TDS computation, recruitm
 
 ## Current phase
 
-Checkpoints 1–2 (paper only): `RESEARCH.md`, `ARCHITECTURE.md`, `DESIGN.md`, `CLAUDE.md`.
-**Write NO application code** (no React/Next.js, SQL, migrations or backend setup) until **faculty** sign-off of `ARCHITECTURE.md` and `DESIGN.md` is recorded in the decision log (§12 of `ARCHITECTURE.md`). Owner sign-off was recorded on 2026-10-17; faculty sign-off is still pending. On 2026-10-23 the owner authorised starting Checkpoint 3 before it is recorded (logged in §12); if the faculty requests changes, update the docs first and rework as needed.
+Checkpoints 1-2 (paper) are done: `RESEARCH.md`, `ARCHITECTURE.md`, `DESIGN.md`, `CLAUDE.md`. Owner sign-off was recorded on 2026-10-17; the owner authorised building before faculty sign-off on 2026-10-23 (logged in `ARCHITECTURE.md` section 12). If the faculty requests changes, update the docs first and rework as needed.
+Build status: database, rules, roles, Employee Master, Attendance, Leave, approvals, reports, settings and the HR assistant are built and tested on live data. Skipped by the owner and logged in section 12: email sending, certificate upload, the research interview.
 
 ## Source of truth (read before changing anything)
 

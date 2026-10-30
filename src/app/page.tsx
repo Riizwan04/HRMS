@@ -14,7 +14,7 @@ import { CheckInCard } from "./check-in-card";
 import { CheckInLive } from "./check-in-live";
 import { PendingList, type PendingRow } from "./pending-list";
 
-export const metadata = { title: "Dashboard · Kinara" };
+export const metadata = { title: "Dashboard · Samudra" };
 
 const ROLES: { key: Role; label: string }[] = [
   { key: "employee", label: "Employee" }, { key: "manager", label: "Manager" }, { key: "hr", label: "HR Admin" },

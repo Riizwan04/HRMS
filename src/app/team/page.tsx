@@ -12,7 +12,7 @@ import { addMonths, formatMonth, monthStart, todayIST } from "@/lib/time/ist";
 import { getTeamTodayDetail } from "@/modules/attendance";
 import { getTeamMonth } from "@/modules/team";
 
-export const metadata = { title: "Team attendance · Kinara" };
+export const metadata = { title: "Team attendance · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; month?: string }> }) {
   const sp = await searchParams;

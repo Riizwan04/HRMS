@@ -9,7 +9,7 @@ import { dateLineFor } from "@/lib/page-context";
 import { PREVIEW_ENABLED } from "@/lib/preview-data";
 import { getFormOptions, listEmployees } from "@/modules/employees";
 
-export const metadata = { title: "Employees · Kinara" };
+export const metadata = { title: "Employees · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; q?: string; status?: string; location?: string; department?: string }> }) {
   const sp = await searchParams;

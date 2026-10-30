@@ -7,7 +7,7 @@ import { getFormOptions } from "@/modules/employees";
 import { getSettings } from "@/modules/settings";
 import { SettingsView } from "./settings-view";
 
-export const metadata = { title: "Settings · Kinara" };
+export const metadata = { title: "Settings · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;

@@ -6,7 +6,7 @@ import { attendanceMonth, attendanceSummary, PREVIEW_ENABLED, sample, sampleRequ
 import { getLateLimit, getMonthRows, getMyRequests, getSummary } from "@/modules/attendance";
 import { AttendanceView } from "./attendance-view";
 
-export const metadata = { title: "My attendance · Kinara" };
+export const metadata = { title: "My attendance · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; month?: string }> }) {
   const sp = await searchParams;

@@ -58,8 +58,8 @@ export function AppShellClient({ demo = false, liveData = false, role, active, e
     <div className="flex min-h-screen">
       <aside className="hidden w-64 shrink-0 flex-col gap-1 border-r border-border bg-sidebar p-3 lg:flex">
         <div className="flex items-center gap-2 px-3 py-3">
-          <Image src="/brand/kinara-logo.svg" alt="" width={32} height={32} />
-          <span className="text-lg font-semibold">Kinara</span>
+          <Image src="/brand/samudra-logo.svg" alt="" width={32} height={32} />
+          <span className="text-lg font-semibold">Samudra</span>
         </div>
         <nav aria-label="Main" className="flex flex-col gap-1">
           {built.map((i) => link(i))}
@@ -75,8 +75,8 @@ export function AppShellClient({ demo = false, liveData = false, role, active, e
       <div className="flex min-w-0 flex-1 flex-col overflow-x-hidden">
         <header className="flex items-center justify-between gap-3 border-b border-border bg-sidebar px-4 py-3">
           <div className="flex items-center gap-2 lg:hidden">
-            <Image src="/brand/kinara-logo.svg" alt="" width={28} height={28} />
-            <span className="font-semibold">Kinara</span>
+            <Image src="/brand/samudra-logo.svg" alt="" width={28} height={28} />
+            <span className="font-semibold">Samudra</span>
           </div>
           <p className="hidden text-sm text-muted sm:block">{dateLine}</p>
           {!liveData && <span className="rounded-full border border-warning px-2.5 py-1 text-xs font-semibold text-warning" title="This screen still shows sample data">Demo · sample data</span>}

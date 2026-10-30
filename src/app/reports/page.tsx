@@ -9,7 +9,7 @@ import { addMonths, formatMonth, monthStart, todayIST } from "@/lib/time/ist";
 import { getFormOptions } from "@/modules/employees";
 import { getMonthReport } from "@/modules/reports";
 
-export const metadata = { title: "Reports · Kinara" };
+export const metadata = { title: "Reports · Samudra" };
 const f1 = (x: number) => (Number.isInteger(x) ? String(x) : x.toFixed(1));
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; month?: string; location?: string }> }) {

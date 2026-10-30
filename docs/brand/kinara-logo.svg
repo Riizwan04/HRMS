@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="t">
-  <title id="t">Kinara</title>
-  <rect width="64" height="64" rx="14" fill="#0F766E"/>
-  <circle cx="44" cy="20" r="7" fill="#FEF3C7"/>
-  <path d="M8 38c6-6 12-6 18 0s12 6 18 0 12-6 12-6" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
-  <path d="M8 49c6-6 12-6 18 0s12 6 18 0 12-6 12-6" fill="none" stroke="#99F6E4" stroke-width="4" stroke-linecap="round"/>
-</svg>

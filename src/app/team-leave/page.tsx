@@ -9,7 +9,7 @@ import { PREVIEW_ENABLED } from "@/lib/preview-data";
 import { addMonths, formatDayShort, formatMonth, monthStart, todayIST } from "@/lib/time/ist";
 import { getTeamLeaveMonth } from "@/modules/team";
 
-export const metadata = { title: "Leave calendar · Kinara" };
+export const metadata = { title: "Leave calendar · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; month?: string }> }) {
   const sp = await searchParams;

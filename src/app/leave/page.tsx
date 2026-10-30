@@ -8,7 +8,7 @@ import { getBalances, getHistory, getLopTaken } from "@/modules/leave";
 import { leaveBalanceRows, leaveHistory, lopTaken, PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { LeaveView } from "./leave-view";
 
-export const metadata = { title: "My leave · Kinara" };
+export const metadata = { title: "My leave · Samudra" };
 
 // ?state=empty and ?state=loading show the designed empty and loading states (DESIGN.md section 7).
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {

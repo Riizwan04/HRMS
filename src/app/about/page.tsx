@@ -2,7 +2,7 @@ import { CheckCircle2, CircleDashed, ExternalLink } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
-export const metadata = { title: "Kinara · Konkan Coastal Foods HRMS" };
+export const metadata = { title: "Samudra · Konkan Coastal Foods HRMS" };
 
 const WORKING = [
   { href: "/", title: "Home dashboard", note: "Check in and see leave balances at a glance. Employee, Manager and HR Admin views." },
@@ -18,9 +18,9 @@ export default function Home() {
   return (
     <main className="mx-auto flex min-h-screen max-w-3xl flex-col gap-8 px-5 py-10">
       <header className="flex items-center gap-4">
-        <Image src="/brand/kinara-logo.svg" alt="" width={56} height={56} />
+        <Image src="/brand/samudra-logo.svg" alt="" width={56} height={56} />
         <div>
-          <h1 className="text-3xl font-semibold">Kinara</h1>
+          <h1 className="text-3xl font-semibold">Samudra</h1>
           <p className="text-muted">Konkan Coastal Foods HRMS · People, simply.</p>
         </div>
       </header>

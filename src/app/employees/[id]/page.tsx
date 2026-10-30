@@ -7,7 +7,7 @@ import { PREVIEW_ENABLED } from "@/lib/preview-data";
 import { getAudit, getFormOptions, getProfile } from "@/modules/employees";
 import { ProfileView } from "./profile-view";
 
-export const metadata = { title: "Profile · Kinara" };
+export const metadata = { title: "Profile · Samudra" };
 
 export default async function Page({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ created?: string }> }) {
   const { id } = await params;

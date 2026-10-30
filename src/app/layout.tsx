@@ -10,7 +10,7 @@ export const maxDuration = 60;
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Kinara · Konkan Coastal Foods",
+  title: "Samudra · Konkan Coastal Foods",
   description: "People, simply.",
 };
 

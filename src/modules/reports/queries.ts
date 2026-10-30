@@ -30,5 +30,5 @@ export async function exportMonthCsv(month: string, f: ReportFilter): Promise<{ 
   const hash = createHash("sha256").update(csv).digest("hex");
   const scope = me.role === "hr" ? (f.locationId || f.departmentId ? "hr_filtered" : "hr_all") : "manager_team";
   await withUser({ sub: me.sub }, [q`select public.log_month_export(${`${month}-01`}::date, ${scope}::text, ${rows.length}::int, ${hash}::text)`]);
-  return { csv, filename: `kinara-attendance-${month}.csv`, rows: rows.length };
+  return { csv, filename: `samudra-attendance-${month}.csv`, rows: rows.length };
 }

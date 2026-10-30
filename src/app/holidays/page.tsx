@@ -7,7 +7,7 @@ import { holidayRequestStart, holidayRows, holidaySites, PREVIEW_ENABLED, sample
 import { getHolidays, getMySiteId, getOptionalChoices } from "@/modules/holidays";
 import { HolidaysView } from "./holidays-view";
 
-export const metadata = { title: "Holidays · Kinara" };
+export const metadata = { title: "Holidays · Samudra" };
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string; state?: string }> }) {
   const sp = await searchParams;
