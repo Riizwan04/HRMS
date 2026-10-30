@@ -4,6 +4,9 @@ import { Inter } from "next/font/google";
 import { clerkAppearance, clerkEnabled } from "@/lib/clerk-config";
 import "./globals.css";
 
+// The assistant calls a model and several tools in one server action; give it room beyond the short default.
+export const maxDuration = 60;
+
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
 
 export const metadata: Metadata = {

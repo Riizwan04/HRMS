@@ -59,6 +59,6 @@ Code is organised **by module** under `src/modules/{employees,attendance,leave,r
 
 - Install: `npm install` · Dev server: `npm run dev` · Lint: `npm run lint` · Build: `npm run build`
 - Database tests: `npm run test:db` (needs local Postgres 16 with pgTAP; rebuilds a throwaway `hrms_test` DB, applies `db/migrations`, runs `db/tests` with `pg_prove`). Test names cite rule IDs.
-- Database setup (developer machine only): `npm run db:migrate` (applies `db/migrations`, optional `APP_RUNTIME_PASSWORD`), `npm run db:seed` (needs `SEED_HR_EMAIL`, `SEED_MANAGER_EMAIL`, `SEED_EMPLOYEE_EMAIL`). Unit tests: `npm run test:tz`.
+- Database setup (developer machine only): `npm run db:migrate` (applies `db/migrations`, optional `APP_RUNTIME_PASSWORD`), `npm run db:seed` (needs `SEED_HR_EMAIL`, `SEED_MANAGER_EMAIL`, `SEED_EMPLOYEE_EMAIL`). Unit tests: `npm run test:tz`. App-to-database tests: `npm run test:int`. Real-model assistant prompts: `npm run agent:prompts` (needs Neon and the Gemini key).
 - Copy `.env.example` to `.env.local` and fill it in (never commit it). Add test commands here when Vitest/pgTAP/Playwright are set up.
 - This repo uses Next.js 16: the file formerly called `middleware.ts` is **`proxy.ts`**. Read `node_modules/next/dist/docs/` before using Next APIs from memory (see `AGENTS.md`).

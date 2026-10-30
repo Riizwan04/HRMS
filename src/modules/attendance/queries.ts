@@ -106,3 +106,15 @@ export async function getOrgToday(): Promise<OrgToday> {
   ]);
   return { active: Number(a.active), notSignedIn: Number(a.unlinked), onLeave: Number(b.on_leave), absent: Number(b.absent), missingOut: Number(b.missing) };
 }
+
+export type TeamMemberToday = { name: string; code: string; status: string; wfh: boolean; late: boolean };
+
+/** Who in the caller's team is present, on leave or absent today (names only; no sensitive fields). */
+export async function getTeamTodayDetail(): Promise<TeamMemberToday[]> {
+  const me = await requireEmployee();
+  const day = todayIST();
+  const [rows] = await withUser({ sub: me.sub }, [q`select m.full_name, m.employee_code, s.status, s.is_wfh, s.is_late
+      from public.team_members() m cross join lateral public.day_status(m.id, ${day}::date, ${day}::date) s
+      where m.id <> ${me.id}::uuid order by m.full_name`]);
+  return rows.map((r) => ({ name: String(r.full_name), code: String(r.employee_code), status: String(r.status), wfh: Boolean(r.is_wfh), late: Boolean(r.is_late) }));
+}

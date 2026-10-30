@@ -7,7 +7,8 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import type { ComponentType, ReactNode } from "react";
+import { useState, type ComponentType, type ReactNode } from "react";
+import { AskHrPanel } from "@/components/ask-hr";
 
 type Role = "employee" | "manager" | "hr";
 type Item = { key: string; label: string; href: string; Icon: ComponentType<{ className?: string }>; roles: Role[] };
@@ -30,6 +31,7 @@ const ITEMS: Item[] = [
 export function AppShellClient({ demo = false, liveData = false, role, active, enabled, userName, dateLine, userSlot, children }: {
   demo?: boolean; liveData?: boolean; role: Role; active: string; enabled: string[]; userName: string; dateLine: string; userSlot?: ReactNode; children: ReactNode;
 }) {
+  const [askOpen, setAskOpen] = useState(false);
   const items = ITEMS.filter((i) => i.roles.includes(role));
   const link = (i: Item, extra = "") =>
     enabled.includes(i.key) ? (
@@ -78,8 +80,8 @@ export function AppShellClient({ demo = false, liveData = false, role, active, e
           </div>
           <p className="hidden text-sm text-muted sm:block">{dateLine}</p>
           {!liveData && <span className="rounded-full border border-warning px-2.5 py-1 text-xs font-semibold text-warning" title="This screen still shows sample data">Demo · sample data</span>}
-          <button type="button" disabled title="The assistant is built later"
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-input px-3 text-sm font-semibold text-primary opacity-70">
+          <button type="button" disabled={demo} onClick={() => setAskOpen(true)} title={demo ? "Sign in to use the assistant" : "Ask the HR assistant"}
+            className={clsx("inline-flex h-10 items-center gap-2 rounded-lg border border-input px-3 text-sm font-semibold text-primary", demo && "opacity-70")}>
             <MessageCircle className="size-4" aria-hidden /> Ask HR
           </button>
           {userSlot}
@@ -96,13 +98,15 @@ export function AppShellClient({ demo = false, liveData = false, role, active, e
             <i.Icon className="size-5" aria-hidden /> {({ home: "Home", attendance: "Attendance", leave: "Leave" } as Record<string, string>)[i.key]}
           </Link>
         ))}
-        <span className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium text-muted opacity-60">
+        <button type="button" disabled={demo} onClick={() => setAskOpen(true)}
+          className={clsx("flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium", demo ? "text-muted opacity-60" : "text-primary")}>
           <MessageCircle className="size-5" aria-hidden /> Ask HR
-        </span>
+        </button>
         <span className="flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium text-muted opacity-60">
           <MoreHorizontal className="size-5" aria-hidden /> More
         </span>
       </nav>
+      {!demo && <AskHrPanel open={askOpen} onClose={() => setAskOpen(false)} />}
     </div>
   );
 }

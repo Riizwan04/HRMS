@@ -6,3 +6,9 @@ export async function adminSql(text: string, values: unknown[] = []): Promise<vo
   await c.connect();
   try { await c.query(text, values); } finally { await c.end(); }
 }
+
+export async function adminRows(text: string, values: unknown[] = []): Promise<Record<string, unknown>[]> {
+  const c = new Client({ connectionString: process.env.DATABASE_URL_ADMIN });
+  await c.connect();
+  try { return (await c.query(text, values)).rows; } finally { await c.end(); }
+}
