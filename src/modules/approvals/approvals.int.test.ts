@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import { as } from "@/test/int-helpers";
 import { applyLeave, getLeaveTypes } from "@/modules/leave";
-import { decideRequest, getPendingApprovals } from "./index";
+import { decideRequest, getDecisions, getPendingApprovals } from "./index";
 
 vi.mock("@/lib/auth", async () => (await import("@/test/int-helpers")).authMock());
 
@@ -42,5 +42,21 @@ describe("Approvals inbox (L4, LR-15, LR-21, LR-17 scope)", () => {
     expect(await decideRequest({ kind: "leave", id: leaveId, decision: "approve", comment: "" })).toEqual({ ok: true });
     as("mgr");
     expect((await getPendingApprovals()).find((i) => i.id === leaveId)).toBeUndefined();
+  });
+});
+
+describe("Decided tab", () => {
+  it("lists what the caller decided, with the comment and outcome", async () => {
+    as("emp1");
+    const r = await applyLeave({ typeId: CL, from: "2026-12-21", to: "2026-12-21", reason: "Personal errand", attachment: null });
+    as("mgr");
+    await decideRequest({ kind: "leave", id: r.id!, decision: "reject", comment: "Year-end rush" });
+    const d = (await getDecisions()).find((x) => x.id === r.id)!;
+    expect(d).toMatchObject({ outcome: "rejected", comment: "Year-end rush" });
+    expect(d.text).toContain("Asha Naik");
+  });
+  it("does not list other people's decisions", async () => {
+    as("mgr2");
+    expect(await getDecisions()).toEqual([]);
   });
 });

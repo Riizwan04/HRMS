@@ -47,3 +47,14 @@ export async function getPendingApprovals(): Promise<ApprovalItem[]> {
     }
   });
 }
+
+export type Decision = { id: string; text: string; outcome: string; comment: string };
+
+/** Requests the caller already decided (the inbox "Decided" tab). */
+export async function getDecisions(): Promise<Decision[]> {
+  const me = await requireEmployee();
+  const [rows] = await withUser({ sub: me.sub }, [q`select id, employee_code, employee_name, label, outcome, comment from public.my_decisions(30)`]);
+  return rows.map((r) => ({
+    id: String(r.id), text: `${r.employee_code} ${r.employee_name} · ${r.label}`, outcome: String(r.outcome), comment: (r.comment as string | null) ?? "",
+  }));
+}

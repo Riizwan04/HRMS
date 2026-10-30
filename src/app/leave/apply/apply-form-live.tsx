@@ -66,7 +66,7 @@ export function ApplyFormLive({ types, manager, today }: { types: Option[]; mana
   if (doneId) {
     return (
       <Card><CardBody className="flex flex-col items-start gap-3">
-        <p className="flex items-center gap-2 font-medium text-success"><CheckCircle2 className="size-5" aria-hidden /> Request submitted{manager ? `. ${manager} has been emailed.` : "."}</p>
+        <p className="flex items-center gap-2 font-medium text-success"><CheckCircle2 className="size-5" aria-hidden /> Request submitted{manager ? `. ${manager} will see it in their Approvals.` : ". HR will see it in Approvals."}</p>
         <Link href="/leave" className="font-medium text-primary underline">View my leave</Link>
       </CardBody></Card>
     );
@@ -121,7 +121,7 @@ export function ApplyFormLive({ types, manager, today }: { types: Option[]; mana
       </div>
 
       <div className="sticky bottom-16 z-[5] mt-4 flex flex-col gap-2 rounded-lg border border-border bg-surface p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between lg:static lg:bottom-auto lg:shadow-none">
-        {error ? <p role="alert" className="text-sm text-danger">{error}</p> : <p className="text-sm text-muted">{manager ? `Your manager, ${manager}, will be emailed.` : "HR will be emailed."}</p>}
+        {error ? <p role="alert" className="text-sm text-danger">{error}</p> : <p className="text-sm text-muted">{manager ? `Your manager, ${manager}, will be asked to approve.` : "HR will be asked to approve."}</p>}
         <div className="flex gap-2">
           <Link href="/leave" className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-input px-4 text-sm font-semibold sm:flex-none">Cancel</Link>
           <Button className="flex-1 sm:flex-none" disabled={blocked} onClick={submit}>{busy ? "Submitting..." : "Submit"}</Button>

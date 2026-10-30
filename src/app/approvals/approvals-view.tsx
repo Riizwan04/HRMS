@@ -108,7 +108,7 @@ export function ApprovalsView({ items, decided, live = false }: { items: Approva
     }
     setPending((ps) => ps.filter((p) => p.id !== id));
     setDone((d) => [{ id, text: `${it.code} ${it.name} · ${KIND[it.kind].label}`, outcome, comment: comment || (outcome === "approved" ? "Approved" : "") }, ...d]);
-    setNotice(`${outcome === "approved" ? "Approved" : "Rejected"}. The employee is notified.${live ? "" : " (Sample data.)"}`);
+    setNotice(`${outcome === "approved" ? "Approved" : "Rejected"}. The employee sees the new status under their requests.${live ? "" : " (Sample data.)"}`);
     return null;
   };
 

@@ -27,8 +27,8 @@ const ITEMS: Item[] = [
   { key: "settings", label: "Settings", href: "/settings", Icon: Settings, roles: ["hr"] },
 ];
 
-export function AppShellClient({ demo = false, role, active, enabled, userName, dateLine, userSlot, children }: {
-  demo?: boolean; role: Role; active: string; enabled: string[]; userName: string; dateLine: string; userSlot?: ReactNode; children: ReactNode;
+export function AppShellClient({ demo = false, liveData = false, role, active, enabled, userName, dateLine, userSlot, children }: {
+  demo?: boolean; liveData?: boolean; role: Role; active: string; enabled: string[]; userName: string; dateLine: string; userSlot?: ReactNode; children: ReactNode;
 }) {
   const items = ITEMS.filter((i) => i.roles.includes(role));
   const link = (i: Item, extra = "") =>
@@ -77,7 +77,7 @@ export function AppShellClient({ demo = false, role, active, enabled, userName, 
             <span className="font-semibold">Kinara</span>
           </div>
           <p className="hidden text-sm text-muted sm:block">{dateLine}</p>
-          <span className="rounded-full border border-warning px-2.5 py-1 text-xs font-semibold text-warning" title="Prototype screens use sample data until sign-in and the database are connected">Demo · sample data</span>
+          {!liveData && <span className="rounded-full border border-warning px-2.5 py-1 text-xs font-semibold text-warning" title="This screen still shows sample data">Demo · sample data</span>}
           <button type="button" disabled title="The assistant is built later"
             className="inline-flex h-10 items-center gap-2 rounded-lg border border-input px-3 text-sm font-semibold text-primary opacity-70">
             <MessageCircle className="size-4" aria-hidden /> Ask HR

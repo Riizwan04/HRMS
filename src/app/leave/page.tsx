@@ -21,7 +21,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
     ? { balances: leaveBalanceRows, lop: lopTaken, history: leaveHistory, today: todayIST(new Date(sample.nowIso)) }
     : { balances: await getBalances(year), lop: await getLopTaken(year), history: await getHistory(year), today: todayIST() };
   return (
-    <AppShell demo={me.demo} role={role} active="leave" enabled={PREVIEW_ENABLED} userName={name} dateLine={dateLineFor(me.demo)}>
+    <AppShell demo={me.demo} liveData={!me.demo} role={role} active="leave" enabled={PREVIEW_ENABLED} userName={name} dateLine={dateLineFor(me.demo)}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold">My leave</h1>
         <LinkButton href={`/leave/apply?role=${role}`}>Apply for leave</LinkButton>
