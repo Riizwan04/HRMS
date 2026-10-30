@@ -3,7 +3,7 @@ import { BalanceCard } from "@/components/balance-card";
 import { AppShell } from "@/components/app-shell";
 import { Button, LinkButton } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
-import { displayName } from "@/lib/session";
+import { requireEmployee } from "@/lib/auth";
 import { formatDateTimeIST, formatTimeIST } from "@/lib/time/ist";
 import { PREVIEW_ENABLED, sample, type Role } from "@/lib/preview-data";
 import { CheckInCard } from "./check-in-card";
@@ -20,13 +20,14 @@ function Stat({ label, value }: { label: string; value: string | number }) {
 
 export default async function Page({ searchParams }: { searchParams: Promise<{ role?: string }> }) {
   const sp = await searchParams;
-  const name = await displayName();
-  const role: Role = sp.role === "manager" || sp.role === "hr" ? sp.role : "employee";
+  const me = await requireEmployee(sp.role);
+  const name = me.name;
+  const role: Role = me.role;
   const { team, org } = sample;
 
   return (
-    <AppShell role={role} active="home" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
-      <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2 text-sm">
+    <AppShell demo={me.demo} role={role} active="home" enabled={PREVIEW_ENABLED} userName={name} dateLine={formatDateTimeIST(sample.nowIso)}>
+      {me.demo && <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-border bg-surface p-2 text-sm">
         <span className="px-2 font-medium text-muted">Preview with sample data. View as:</span>
         {ROLES.map((r) => (
           <Link key={r.key} href={`/?role=${r.key}`}
@@ -34,7 +35,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ r
             {r.label}
           </Link>
         ))}
-      </div>
+      </div>}
 
       <h1 className="mb-4 text-2xl font-semibold">Good morning, {name.split(" ")[0]}</h1>
 

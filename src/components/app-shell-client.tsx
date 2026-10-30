@@ -27,13 +27,13 @@ const ITEMS: Item[] = [
   { key: "settings", label: "Settings", href: "/settings", Icon: Settings, roles: ["hr"] },
 ];
 
-export function AppShellClient({ role, active, enabled, userName, dateLine, userSlot, children }: {
-  role: Role; active: string; enabled: string[]; userName: string; dateLine: string; userSlot?: ReactNode; children: ReactNode;
+export function AppShellClient({ demo = false, role, active, enabled, userName, dateLine, userSlot, children }: {
+  demo?: boolean; role: Role; active: string; enabled: string[]; userName: string; dateLine: string; userSlot?: ReactNode; children: ReactNode;
 }) {
   const items = ITEMS.filter((i) => i.roles.includes(role));
   const link = (i: Item, extra = "") =>
     enabled.includes(i.key) ? (
-      <Link key={i.key} href={`${i.href}?role=${role}`} aria-current={i.key === active ? "page" : undefined}
+      <Link key={i.key} href={demo ? `${i.href}?role=${role}` : i.href} aria-current={i.key === active ? "page" : undefined}
         className={clsx("flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium", extra,
           i.key === active ? "bg-primary text-on-primary" : "text-text hover:bg-surface-2")}>
         <i.Icon className="size-5" aria-hidden /> {i.label}
@@ -90,7 +90,7 @@ export function AppShellClient({ role, active, enabled, userName, dateLine, user
 
       <nav aria-label="Main (phone)" className="fixed inset-x-0 bottom-0 z-10 flex border-t border-border bg-sidebar lg:hidden">
         {tabs.map((i) => (
-          <Link key={i.key} href={`${i.href}?role=${role}`} aria-current={i.key === active ? "page" : undefined}
+          <Link key={i.key} href={demo ? `${i.href}?role=${role}` : i.href} aria-current={i.key === active ? "page" : undefined}
             className={clsx("flex min-h-14 flex-1 flex-col items-center justify-center gap-0.5 text-xs font-medium",
               i.key === active ? "text-primary" : "text-muted")}>
             <i.Icon className="size-5" aria-hidden /> {({ home: "Home", attendance: "Attendance", leave: "Leave" } as Record<string, string>)[i.key]}

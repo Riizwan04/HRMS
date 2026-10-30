@@ -51,7 +51,9 @@ Not yet done, and shown as "soon" in the app: team attendance, leave calendar, e
 ## Sign-in
 
 Sign-in uses Clerk. It switches on automatically when `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` are set (Vercel environment variables
-or `.env.local`): every page then requires login and the dashboard opens after it. Without the keys the app runs in demo mode and opens straight to the dashboard.
+or `.env.local`): every page then requires login and the dashboard opens after it. Without the keys the app runs in demo mode (sample data, "View as" switch) and opens straight to the dashboard.
+With the keys, **roles come from the database**: the signed-in email must match an active employee, else `/access-denied`. Employees cannot open `/approvals`; HR Admin and Manager are decided by the `employees` table, never by the URL.
+Setup: `npm run db:migrate` then `npm run db:seed` (needs `DATABASE_URL_ADMIN` and `SEED_*_EMAIL`, see `.env.example`), then set `DATABASE_URL` (the `app_runtime` login) on Vercel.
 `/about` (project status) is always public.
 
 ## Run it
