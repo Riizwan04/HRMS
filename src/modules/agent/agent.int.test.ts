@@ -162,3 +162,14 @@ describe("Agent: provider failures are classified and shown, not hidden", () => 
     expect(r.answer).toContain("unavailable right now");
   });
 });
+
+describe("Agent: a hung model call times out instead of leaving the user waiting", () => {
+  it("returns a timeout failure quickly so the next model can be tried", async () => {
+    as("emp1");
+    const hanging = new MockLanguageModelV4({ doGenerate: (opts) => new Promise((_, reject) => opts.abortSignal?.addEventListener("abort", () => reject(opts.abortSignal?.reason))) });
+    const t0 = performance.now();
+    const r = await runAgent({ me: await mockSession(), messages: [{ role: "user", content: "hello" }], model: hanging, timeoutMs: 80 });
+    expect(r.failure?.kind).toBe("timeout");
+    expect(performance.now() - t0).toBeLessThan(3000);
+  });
+});

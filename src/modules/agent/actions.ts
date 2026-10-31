@@ -15,10 +15,15 @@ export async function askAgent(i: { messages: ChatMessage[]; conversationId?: st
   // Try the configured model first, then newer and older Gemini models: a retired or unavailable model (404) or an exhausted quota (429)
   // moves on to the next one, so the assistant keeps working without anyone editing settings. Auth errors stop at once.
   const candidates = [...new Set([process.env.AGENT_MODEL, "gemini-2.5-flash", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.0-flash"].filter((m): m is string => Boolean(m)))];
+  // Each attempt is capped, and the whole question stays inside ~45 s, so the panel always answers or explains.
+  const started = performance.now();
   let reply: AgentReply | null = null;
   for (const id of candidates) {
-    reply = await runAgent({ me, messages: i.messages, conversationId: reply?.conversationId ?? i.conversationId, model: google(id) });
-    if (!reply.failure || (reply.failure.kind !== "model_unavailable" && reply.failure.kind !== "quota")) return reply;
+    const left = 45_000 - (performance.now() - started);
+    if (reply && left < 6_000) break;
+    reply = await runAgent({ me, messages: i.messages, conversationId: reply?.conversationId ?? i.conversationId, model: google(id), timeoutMs: Math.min(22_000, Math.max(left - 2_000, 4_000)) });
+    if (!reply.failure || reply.failure.kind === "auth" || reply.failure.kind === "other") return reply;
+    console.error("[agent] trying the next model after", id, reply.failure.kind);
   }
   return reply!;
 }

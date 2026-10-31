@@ -33,10 +33,14 @@ export function AskHrPanel({ open, onClose }: { open: boolean; onClose: () => vo
     const next: Msg[] = [...msgs, { role: "user", content: question }];
     setMsgs(next); setText("");
     start(async () => {
-      const r = await askAgent({ messages: next.map((m) => ({ role: m.role, content: m.content })), conversationId: conv });
-      if ("error" in r) { setMsgs([...next, { role: "assistant", content: r.error }]); return; }
-      setConv(r.conversationId);
-      setMsgs([...next, { role: "assistant", content: r.answer, calls: r.calls, drafts: r.drafts }]);
+      try {
+        const r = await askAgent({ messages: next.map((m) => ({ role: m.role, content: m.content })), conversationId: conv });
+        if ("error" in r) { setMsgs([...next, { role: "assistant", content: r.error }]); return; }
+        setConv(r.conversationId);
+        setMsgs([...next, { role: "assistant", content: r.answer, calls: r.calls, drafts: r.drafts }]);
+      } catch {
+        setMsgs([...next, { role: "assistant", content: "The assistant did not answer in time. Please try again." }]);
+      }
     });
   };
   const confirm = (d: Draft) => start(async () => {

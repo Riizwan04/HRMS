@@ -6,7 +6,7 @@ import { redactSensitive, statesNumbers } from "./redact";
 import { buildTools, type CallRecord, type DraftInfo, newTracker } from "./tools";
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
-export type Failure = { kind: "model_unavailable" | "quota" | "auth" | "other"; status?: number; detail: string };
+export type Failure = { kind: "model_unavailable" | "quota" | "auth" | "timeout" | "other"; status?: number; detail: string };
 export type AgentReply = { answer: string; calls: CallRecord[]; drafts: DraftInfo[]; conversationId: string; failure?: Failure };
 
 export const NUMBERS_NEED_TOOLS =
@@ -17,8 +17,10 @@ const UNAVAILABLE = "The assistant is unavailable right now. Please try again in
 export function classifyFailure(e: unknown): Failure {
   const status = APICallError.isInstance(e) ? e.statusCode : undefined;
   const msg = ((e as Error)?.message ?? String(e)).replace(/\s+/g, " ").slice(0, 180);
+  const name = (e as Error)?.name ?? "";
   const kind: Failure["kind"] =
-    status === 401 || status === 403 || /api key|permission denied|unauthori[sz]ed/i.test(msg) ? "auth"
+    name === "TimeoutError" || name === "AbortError" || /timed? ?out|aborted/i.test(msg) ? "timeout"
+    : status === 401 || status === 403 || /api key|permission denied|unauthori[sz]ed/i.test(msg) ? "auth"
     : status === 429 || /quota|rate limit|resource.?exhausted/i.test(msg) ? "quota"
     : status === 404 || /not found|no longer available|deprecated|is not supported/i.test(msg) ? "model_unavailable" : "other";
   return { kind, status, detail: `${status ? `HTTP ${status}: ` : ""}${msg}` };
@@ -26,6 +28,7 @@ export function classifyFailure(e: unknown): Failure {
 const FAILURE_TEXT: Record<Failure["kind"], string> = {
   auth: "The AI key was rejected by Google. Please ask HR to check the AI key.",
   quota: "The free AI limit is used up for the moment. Please try again in a minute.",
+  timeout: "The AI took too long to answer. Please try again.",
   model_unavailable: "The AI model is not available right now.",
   other: UNAVAILABLE,
 };
@@ -49,7 +52,7 @@ function systemPrompt(me: Me): string {
 }
 
 /** One question to the assistant. The model decides which tools to call; everything it states comes from tool results. */
-export async function runAgent(i: { me: Me; messages: ChatMessage[]; model: LanguageModel; conversationId?: string }): Promise<AgentReply> {
+export async function runAgent(i: { me: Me; messages: ChatMessage[]; model: LanguageModel; conversationId?: string; timeoutMs?: number }): Promise<AgentReply> {
   const conversationId = i.conversationId ?? crypto.randomUUID();
   const tracker = newTracker();
   // Sensitive identifiers never reach the model, even if the user types them.
@@ -58,6 +61,7 @@ export async function runAgent(i: { me: Me; messages: ChatMessage[]; model: Lang
     const result = await generateText({
       model: i.model, system: systemPrompt(i.me), messages, temperature: 0,
       tools: buildTools({ me: i.me, conversationId }, tracker), stopWhen: isStepCount(7),
+      maxRetries: 0, abortSignal: AbortSignal.timeout(i.timeoutMs ?? 25_000),   // fail fast so the next model can be tried inside the time limit
     });
     let answer = result.text.trim();
     if (tracker.count === 0 && statesNumbers(answer)) answer = NUMBERS_NEED_TOOLS;
