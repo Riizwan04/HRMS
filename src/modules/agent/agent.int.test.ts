@@ -1,3 +1,5 @@
+import { APICallError } from "ai";
+import { MockLanguageModelV4 } from "ai/test";
 import { describe, expect, it, vi } from "vitest";
 import { adminRows } from "@/test/admin";
 import { as, mockSession } from "@/test/int-helpers";
@@ -30,9 +32,9 @@ describe("Agent: tools and who may use them (brief guardrails 1, 3)", () => {
   });
 });
 
-describe("Agent: a question answered from a tool (Hinglish), logged (guardrail 6)", () => {
-  it("kitni CL bachi hai? calls get_my_leave_balance and the call is logged", async () => {
-    const { reply, model } = await ask("emp1", "kitni CL bachi hai?", [{ tools: [{ name: "get_my_leave_balance", input: {} }] }, { text: "Aapki CL 8.0 din bachi hai." }]);
+describe("Agent: a question answered from a tool, logged (guardrail 6)", () => {
+  it("How much CL do I have left? calls get_my_leave_balance and the call is logged", async () => {
+    const { reply, model } = await ask("emp1", "How much CL do I have left?", [{ tools: [{ name: "get_my_leave_balance", input: {} }] }, { text: "You have 8.0 days of CL left." }]);
     expect(reply.calls).toEqual([{ tool: "get_my_leave_balance", input: {}, outcome: "ok" }]);
     expect(reply.answer).toContain("8.0");
     expect(JSON.stringify(model.doGenerateCalls[1].prompt)).toMatch(/available\\?":8/);   // the number the model saw came from the tool
@@ -96,7 +98,7 @@ describe("Agent: policy answers only from stored text (guardrail 5)", () => {
 
 describe("Agent: writes are drafts a human confirms (guardrail 3)", () => {
   it("drafting creates no request; pressing Confirm submits it as a pending request", async () => {
-    const { reply } = await ask("plant1", "kal ki chutti chahiye", [
+    const { reply } = await ask("plant1", "I need leave tomorrow", [
       { tools: [{ name: "draft_leave_request", input: { leaveType: "CL", from: "2026-12-08", to: "2026-12-09", reason: "Family function" } }] }, { text: "Draft ready, please confirm." }]);
     expect(reply.drafts).toHaveLength(1);
     expect(reply.drafts[0].summary).toContain("CL 2026-12-08 to 2026-12-09: 2 days");
@@ -135,5 +137,28 @@ describe("Agent: manager and HR tools run as the user", () => {
       as("hr");
       expect(await confirmDraft({ id: reply.drafts[0].id })).toMatchObject({ ok: true });
     }
+  });
+});
+
+describe("Agent: provider failures are classified and shown, not hidden", () => {
+  const failing = (status: number, message: string) => new MockLanguageModelV4({ doGenerate: async () => { throw new APICallError({ message, url: "https://example.test", requestBodyValues: {}, statusCode: status }); } });
+  const run = async (model: MockLanguageModelV4) => { as("emp1"); return runAgent({ me: await mockSession(), messages: [{ role: "user", content: "hello" }], model }); };
+  it("a retired model (404) is reported as model_unavailable so the next model can be tried", async () => {
+    const r = await run(failing(404, "models/gemini-x is not found for API version v1beta"));
+    expect(r.failure).toMatchObject({ kind: "model_unavailable", status: 404 });
+    expect(r.answer).toContain("HTTP 404");
+  });
+  it("a used-up free quota (429) is reported as quota", async () => {
+    expect((await run(failing(429, "Quota exceeded for metric"))).failure?.kind).toBe("quota");
+  });
+  it("a rejected key is reported as auth and says so in plain words", async () => {
+    const r = await run(failing(400, "API key not valid. Please pass a valid API key."));
+    expect(r.failure?.kind).toBe("auth");
+    expect(r.answer).toContain("AI key was rejected");
+  });
+  it("anything else gets the generic message plus the short reason", async () => {
+    const r = await run(failing(500, "Internal error"));
+    expect(r.failure?.kind).toBe("other");
+    expect(r.answer).toContain("unavailable right now");
   });
 });

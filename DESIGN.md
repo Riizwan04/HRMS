@@ -637,7 +637,7 @@ Desktop: right-hand `Sheet` 420 px, opened from the app-bar **Ask HR** button on
 │ working days, and draft a leave request.│
 │ I never see Aadhaar, PAN or bank data.  │
 │ ─────────────────────────────────────── │
-│ You: kal ki chutti chahiye, kitni CL bachi hai? │
+│ You: I need leave tomorrow, how much CL do I have? │
 │ ┌ 🔧 get_my_leave_balance({})  ✓ ┐  ← tools the agent called (expandable) │
 │ ┌ 🔧 count_working_days({from:2026-10-17,to:2026-10-17}) ✓ ┐ │
 │ Assistant: Aapke paas 6.0 CL available hain. Kal (Sat) weekly off hai, isliye ek bhi din nahi katega. │
@@ -646,7 +646,7 @@ Desktop: right-hand `Sheet` 420 px, opened from the app-bar **Ask HR** button on
 │ │ Expires in 14:32                      ││
 │ │ [ Confirm & submit ]  [ Discard ]     ││
 │ └───────────────────────────────────────┘│
-│ Try: "Kitni CL bachi hai?"  "Leave Friday to Monday"  │
+│ Try: "How much CL do I have?"  "Leave Friday to Monday"  │
 │ [ Type your question… 0/500 ]      [ Send ] │
 └─────────────────────────────────────────────────┘
 ```

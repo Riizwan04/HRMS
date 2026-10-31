@@ -9,7 +9,7 @@ type Call = { tool: string; outcome: string };
 type Draft = { id: string; kind: string; summary: string };
 type Msg = { role: "user" | "assistant"; content: string; calls?: Call[]; drafts?: Draft[] };
 
-const SUGGESTIONS = ["Kitni CL bachi hai?", "How many days is Friday to Monday?", "Kal ki chutti chahiye", "What is the late mark rule?"];
+const SUGGESTIONS = ["How much CL do I have left?", "How many days is Friday to Monday?", "I need leave tomorrow", "What is the late mark rule?"];
 const TOOL_LABEL: Record<string, string> = {
   get_my_leave_balance: "Checked your leave balance", get_holidays: "Looked up holidays", count_working_days: "Counted working days",
   explain_policy: "Read the policy", draft_leave_request: "Prepared a leave draft", get_team_today: "Checked your team today",

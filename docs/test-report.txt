@@ -34,5 +34,5 @@ Result: PASS
       Tests  89 passed (89)
 
 == Not covered by automatic tests ==
-- The real AI model: the 21 prompts in src/modules/agent/prompts.json are run with 'npm run agent:prompts' (needs the live database and the Gemini key).
+- The real AI model: the 22 prompts in src/modules/agent/prompts.json are run with 'npm run agent:prompts' (needs the live database and the Gemini key).
 - Email sending and certificate upload were skipped by the owner (not built).

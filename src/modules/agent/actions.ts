@@ -12,7 +12,15 @@ export async function askAgent(i: { messages: ChatMessage[]; conversationId?: st
   const me = await requireEmployee();
   if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) return { error: "The assistant isn't switched on yet. Please ask HR to add the AI key." };
   if (!Array.isArray(i.messages) || i.messages.length === 0 || i.messages[i.messages.length - 1].role !== "user") return { error: "Please type a question." };
-  return runAgent({ me, messages: i.messages, conversationId: i.conversationId, model: google(process.env.AGENT_MODEL || "gemini-2.5-flash") });
+  // Try the configured model first, then newer and older Gemini models: a retired or unavailable model (404) or an exhausted quota (429)
+  // moves on to the next one, so the assistant keeps working without anyone editing settings. Auth errors stop at once.
+  const candidates = [...new Set([process.env.AGENT_MODEL, "gemini-2.5-flash", "gemini-3.5-flash", "gemini-3.6-flash", "gemini-2.0-flash"].filter((m): m is string => Boolean(m)))];
+  let reply: AgentReply | null = null;
+  for (const id of candidates) {
+    reply = await runAgent({ me, messages: i.messages, conversationId: reply?.conversationId ?? i.conversationId, model: google(id) });
+    if (!reply.failure || (reply.failure.kind !== "model_unavailable" && reply.failure.kind !== "quota")) return reply;
+  }
+  return reply!;
 }
 
 const DRAFT_ERRORS: Record<string, string> = {

@@ -25,7 +25,7 @@ The password is whatever was set when the user was created in Clerk. Any other e
 | Employee Master | add employee (multi-step, Indian field validation), searchable directory with filters, profile tabs (personal, job, statutory, bank, contact and emergency, history), self-service contact edit, reporting-line loop check, deactivate with last working day, masked PAN / Aadhaar / bank, logged Reveal (never for Aadhaar), audit history |
 | Attendance | check in / out (IST, one record a day), day status (Present, Half Day, Absent, On Leave, Holiday, Weekly Off, Late), WFH with manager approval, month calendar, regularisation, team attendance, holiday calendar per site with optional holidays (2 a year) |
 | Leave | leave types and quotas (Settings), balances with opening / accrued / used / pending, apply with live working-day count and convert-to-LOP, approve / reject / cancel, leave calendar with clash warnings, month-end summary CSV |
-| HR assistant | "Ask HR" panel: 7 required tools plus a month-end check for HR, guardrails (no approve/reject/cancel, 5-call cap, `agent_log`, no Aadhaar / PAN / bank to the model, numbers only from tools, writes only as drafts confirmed by a button), Hinglish |
+| HR assistant | "Ask HR" panel: 7 required tools plus a month-end check for HR, guardrails (no approve/reject/cancel, 5-call cap, `agent_log`, no Aadhaar / PAN / bank to the model, numbers only from tools, writes only as drafts confirmed by a button), plain-English replies |
 | Roles | HR Admin flag stored; Manager derived from reporting lines; checked on the server and by database row-level security |
 
 ## Not included (skipped by the owner, decision logged in ARCHITECTURE.md section 12)
@@ -45,7 +45,7 @@ npm run lint && npm run typecheck
 npm run test:tz                    # unit tests under 3 time zones
 npm run test:db                    # database rules + security (pgTAP; needs local PostgreSQL 16 with pgTAP)
 npm run test:int                   # app-to-database tests (needs the same local PostgreSQL)
-npm run agent:prompts              # 21 assistant prompts against the real model (needs Neon + Gemini key)
+npm run agent:prompts              # 22 assistant prompts against the real model (needs Neon + Gemini key)
 ```
 
 ### Setting up the database (Neon)

@@ -4,7 +4,7 @@ import { z } from "zod";
 import type { Me } from "@/lib/auth";
 import { q, withUser } from "@/lib/db/client";
 import { planErrorMessage } from "@/lib/leave-plan";
-import { addDays, formatMonth, monthEnd, todayIST } from "@/lib/time/ist";
+import { addDays, formatMonth, isValidDate, monthEnd, todayIST } from "@/lib/time/ist";
 import { getPendingApprovals } from "@/modules/approvals";
 import { getTeamTodayDetail } from "@/modules/attendance";
 import { getHolidays } from "@/modules/holidays";
@@ -21,8 +21,12 @@ export type Tracker = { calls: CallRecord[]; drafts: DraftInfo[]; count: number 
 export type AgentCtx = { me: Me; conversationId: string };
 export const newTracker = (): Tracker => ({ calls: [], drafts: [], count: 0 });
 
-const DATE = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "use YYYY-MM-DD");
-const MONTH = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/, "use YYYY-MM");
+// Schemas stay minimal on purpose (plain strings, booleans, enums): model providers accept only a subset of JSON Schema, so formats and
+// lengths are checked in code below instead of with patterns and min/max in the schema.
+const DATE = z.string().describe("Date as YYYY-MM-DD");
+const MONTH = z.string().describe("Month as YYYY-MM");
+const okDate = (d: string) => isValidDate(d);
+const okMonth = (m: string) => /^\d{4}-(0[1-9]|1[0-2])$/.test(m);
 
 function clip(v: unknown): unknown {
   const s = JSON.stringify(v ?? null);
@@ -73,8 +77,9 @@ export function buildTools(ctx: AgentCtx, t: Tracker) {
 
     get_holidays: tool({
       description: "List the holidays at the user's own work location for one month (type is national, state or optional). Use for questions like 'is there a holiday in November'.",
-      inputSchema: z.object({ month: MONTH.describe("The month, YYYY-MM") }),
+      inputSchema: z.object({ month: MONTH }),
       execute: (i) => guarded(ctx, t, "get_holidays", i, "any", async () => {
+        if (!okMonth(i.month)) throw new Error("Use the month as YYYY-MM");
         const { holidays } = await getHolidays(Number(i.month.slice(0, 4)));
         return { location: ctx.me.locationName, holidays: holidays.filter((h) => h.site === ctx.me.locationId && h.date.startsWith(i.month)).map((h) => ({ date: h.date, name: h.name, type: h.type })) };
       }),
@@ -84,6 +89,7 @@ export function buildTools(ctx: AgentCtx, t: Tracker) {
       description: "Count the leave days between two dates (inclusive) for the signed-in user, skipping their location's weekly offs and holidays. Use this for every question about how many days a leave would be, e.g. Friday to Monday. Never count days yourself.",
       inputSchema: z.object({ from: DATE, to: DATE }),
       execute: (i) => guarded(ctx, t, "count_working_days", i, "any", async () => {
+        if (!okDate(i.from) || !okDate(i.to)) throw new Error("Use dates as YYYY-MM-DD");
         const [rows] = await withUser({ sub: ctx.me.sub }, [q`select day::text as day, counts, reason, name from public.count_working_days(${ctx.me.id}::uuid, ${i.from}::date, ${i.to}::date)`]);
         return {
           working_days: rows.filter((r) => r.counts).length,
@@ -94,21 +100,24 @@ export function buildTools(ctx: AgentCtx, t: Tracker) {
 
     explain_policy: tool({
       description: "Answer a question about the company's leave, attendance, holiday, WFH or regularisation policy from the stored policy text only. Returns the matching policy excerpts, or found=false when the policy says nothing about it.",
-      inputSchema: z.object({ question: z.string().min(3).max(300) }),
+      inputSchema: z.object({ question: z.string().describe("The policy question in plain words") }),
       execute: (i) => guarded(ctx, t, "explain_policy", i, "any", async () => {
+        if (i.question.trim().length < 3) throw new Error("Ask a longer question");
         const [rows] = await withUser({ sub: ctx.me.sub }, [q`select title, body, version from public.search_policy(${i.question}::text)`]);
         return rows.length === 0 ? { found: false } : { found: true, excerpts: rows.map((r) => ({ policy: r.title, version: r.version, text: r.body })) };
       }),
     }),
 
     draft_leave_request: tool({
-      description: "Prepare a leave request for the user to confirm. This only creates a DRAFT; nothing is submitted until the user presses Confirm. Resolve relative dates like 'kal' (tomorrow) from the dates given in the system prompt. If the balance is not enough, call again with convertExcessToLop=true only if the user agrees to unpaid days.",
+      description: "Prepare a leave request for the user to confirm. This only creates a DRAFT; nothing is submitted until the user presses Confirm. Resolve relative dates like 'tomorrow' or 'next Monday' from the dates given in the system prompt. If the balance is not enough, call again with convertExcessToLop=true only if the user agrees to unpaid days.",
       inputSchema: z.object({
         leaveType: z.string().describe("Leave type code: CL, SL, EL, LOP, ML or PL"), from: DATE, to: DATE,
         half: z.boolean().optional().describe("Half day (same date only)"), session: z.enum(["first", "second"]).optional(),
-        reason: z.string().min(5).max(500), convertExcessToLop: z.boolean().optional(),
+        reason: z.string().describe("Why the leave is needed, at least 5 characters"), convertExcessToLop: z.boolean().optional(),
       }),
       execute: (i) => guarded(ctx, t, "draft_leave_request", i, "any", async () => {
+        if (!okDate(i.from) || !okDate(i.to)) throw new Error("Use dates as YYYY-MM-DD");
+        if (i.reason.trim().length < 5) throw new Error("The reason must be at least 5 characters");
         const type = (await getLeaveTypes(Number(i.from.slice(0, 4)))).find((x) => x.code === i.leaveType.toUpperCase());
         if (!type) return { drafted: false, error: "That leave type is not available for this user." };
         const plan = await previewLeave({ typeId: type.id, from: i.from, to: i.to, half: i.half, session: i.session ?? null, convert: i.convertExcessToLop ?? false, hasDoc: false });
@@ -163,10 +172,11 @@ export function buildTools(ctx: AgentCtx, t: Tracker) {
   const hrOnly = {
     month_end_check: tool({
       description: "HR month-end check: finds employees with repeated Late marks or missed check-outs in a month and prepares a reminder email DRAFT for HR to review and confirm. Nothing is sent until HR presses Confirm. HR only.",
-      inputSchema: z.object({ month: MONTH.optional().describe("YYYY-MM; defaults to the current month"), minLateMarks: z.number().int().min(1).max(10).optional() }),
+      inputSchema: z.object({ month: MONTH.optional().describe("YYYY-MM; defaults to the current month"), minLateMarks: z.number().optional().describe("Flag employees with at least this many Late marks (default 2)") }),
       execute: (i) => guarded(ctx, t, "month_end_check", i, "hr", async () => {
+        if (i.month !== undefined && !okMonth(i.month)) throw new Error("Use the month as YYYY-MM");
         const first = `${i.month ?? todayIST().slice(0, 7)}-01`;
-        const minLate = i.minLateMarks ?? 2;
+        const minLate = Math.min(Math.max(Math.round(i.minLateMarks ?? 2), 1), 10);
         const [rows] = await withUser({ sub: ctx.me.sub }, [q`
           with s as (select * from public.month_summary(${first}::date)),
                m as (select e.id, count(*) filter (where d.missing_checkout)::int as missing
